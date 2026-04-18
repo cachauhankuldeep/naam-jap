@@ -241,6 +241,8 @@
         }
         .transcript-box .hi { color: #ffd700; font-weight: 700; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
         .interim { opacity: 0.4; font-style: italic; }
+        .level-bar-wrap { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-bottom: 6px; overflow: hidden; }
+        .level-bar { height: 100%; width: 0%; background: linear-gradient(90deg,#7c3aed,#ffd700); border-radius: 2px; transition: width 0.05s linear; }
 
         /* ── Stats ── */
         .stats {
@@ -400,7 +402,8 @@
 
 <!-- Transcript -->
 <div class="transcript-section">
-    <div class="section-label">Live Transcript (Hindi)</div>
+    <div class="section-label">Live Transcript</div>
+    <div class="level-bar-wrap"><div class="level-bar" id="levelBar"></div></div>
     <div class="transcript-box" id="transcript">सुनने के लिए Start दबाएँ…</div>
 </div>
 
@@ -602,83 +605,108 @@ function toggleMonth(mk) {
 }
 
 // ════════════════════════════════════════════════════════
-// SPEECH RECOGNITION
+// SPEECH RECOGNITION — Mac / desktop only
 // ════════════════════════════════════════════════════════
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-function freshStart() {
-    recognition = buildRecognition();
-    if (recognition) try { recognition.start(); } catch(_) {}
-}
 
 function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return null;
-
     const rec = new SR();
-    // iOS: one utterance at a time — avoids engine buffering/degradation on repetition
-    // Mac: continuous works fine
-    rec.continuous      = !isIOS;
-    rec.interimResults  = !isIOS;
-    rec.maxAlternatives = isIOS ? 3 : 1;
-    rec.lang            = isIOS ? 'en-US' : 'hi-IN'; // en-US more reliable on English iPhones
-
+    rec.continuous      = true;
+    rec.interimResults  = true;
+    rec.maxAlternatives = 1;
+    rec.lang            = 'hi-IN';
     rec.onstart = () => setUI(true);
-
     rec.onend = () => {
         if (!isListening) { setUI(false); return; }
         creditedPerIndex = {};
-        setTimeout(freshStart, isIOS ? 80 : 150);
+        setTimeout(() => {
+            recognition = buildRecognition();
+            if (recognition) try { recognition.start(); } catch(_) {}
+        }, 150);
     };
-
     rec.onresult = (event) => {
-        if (isIOS) {
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const res = event.results[i];
-                if (!res.isFinal) continue;
-                // Check all alternatives — take the one with the most matches
-                let bestCount = 0, bestPhrase = res[0].transcript;
-                for (let j = 0; j < res.length; j++) {
-                    const c = countOccurrences(res[j].transcript);
-                    if (c > bestCount) { bestCount = c; bestPhrase = res[j].transcript; }
-                }
-                setTranscript(highlight(bestPhrase), false);
-                if (bestCount > 0) addCount(bestCount);
-            }
-        } else {
-            let interim = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const res    = event.results[i];
-                const phrase = res[0].transcript;
-                const found  = countOccurrences(phrase);
-                const prev   = creditedPerIndex[i] || 0;
-                const delta  = found - prev;
-                if (delta > 0) addCount(delta);
-                creditedPerIndex[i] = found;
-                if (res.isFinal) {
-                    delete creditedPerIndex[i];
-                    setTranscript(highlight(phrase), false);
-                } else {
-                    interim += phrase;
-                }
-            }
-            if (interim) setTranscript(highlight(interim), true);
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const res    = event.results[i];
+            const phrase = res[0].transcript;
+            const found  = countOccurrences(phrase);
+            const prev   = creditedPerIndex[i] || 0;
+            const delta  = found - prev;
+            if (delta > 0) addCount(delta);
+            creditedPerIndex[i] = found;
+            if (res.isFinal) {
+                delete creditedPerIndex[i];
+                setTranscript(highlight(phrase), false);
+            } else { interim += phrase; }
         }
+        if (interim) setTranscript(highlight(interim), true);
     };
-
     rec.onerror = (e) => {
-        if (e.error === 'no-speech') return; // onend will auto-restart
-        if (e.error === 'not-allowed') {
-            isListening = false; setUI(false);
-            showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON');
-        }
-        if (e.error === 'service-not-allowed') {
-            isListening = false; setUI(false);
-            showError('Speech blocked.\n\nSettings → Screen Time → Content & Privacy Restrictions → Allowed Apps & Features → Siri → ON\n\nThen reload.');
-        }
+        if (e.error === 'no-speech') return;
+        if (e.error === 'not-allowed') { isListening = false; setUI(false); showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON'); }
+        if (e.error === 'service-not-allowed') { isListening = false; setUI(false); showError('Speech blocked.\n\nSettings → Screen Time → Content & Privacy Restrictions → Allowed Apps & Features → Siri → ON\n\nThen reload.'); }
     };
-
     return rec;
+}
+
+// ════════════════════════════════════════════════════════
+// iOS AUDIO BURST DETECTION
+// Bypasses Siri/speech API — counts each spoken burst directly
+// from microphone volume. Not affected by repetition blindness.
+// ════════════════════════════════════════════════════════
+let burstCtx     = null;
+let burstTimer   = null;
+let burstActive  = false;
+let burstStart   = 0;
+let silenceStart = 0;
+
+const BURST_THRESH = 0.012; // RMS level above this = speaking
+const MIN_BURST_MS = 180;   // Shortest valid chant (ms)
+const MIN_GAP_MS   = 250;   // Silence needed to close a burst
+
+function startBurstDetection(stream) {
+    burstCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const analyser = burstCtx.createAnalyser();
+    analyser.fftSize = 512;
+    burstCtx.createMediaStreamSource(stream).connect(analyser);
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+    burstActive = false; burstStart = 0; silenceStart = 0;
+
+    burstTimer = setInterval(() => {
+        analyser.getByteTimeDomainData(buf);
+        let sum = 0;
+        for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
+        const rms = Math.sqrt(sum / buf.length);
+        const now = Date.now();
+
+        const bar = document.getElementById('levelBar');
+        if (bar) bar.style.width = Math.min(100, rms * 600) + '%';
+
+        if (rms > BURST_THRESH) {
+            if (!burstActive) { burstActive = true; burstStart = now; }
+            silenceStart = 0;
+        } else if (burstActive) {
+            if (!silenceStart) silenceStart = now;
+            if (now - silenceStart >= MIN_GAP_MS) {
+                const dur = silenceStart - burstStart;
+                if (dur >= MIN_BURST_MS) {
+                    addCount(1);
+                    setTranscript('🙏 राधा', false);
+                }
+                burstActive = false; silenceStart = 0;
+            }
+        }
+    }, 20);
+}
+
+function stopBurstDetection() {
+    clearInterval(burstTimer); burstTimer = null;
+    if (burstCtx) { burstCtx.close(); burstCtx = null; }
+    burstActive = false; silenceStart = 0;
+    const bar = document.getElementById('levelBar');
+    if (bar) bar.style.width = '0%';
 }
 
 // ════════════════════════════════════════════════════════
@@ -735,18 +763,23 @@ function showDebug(msg) {
 // ════════════════════════════════════════════════════════
 function startListening() {
     document.getElementById('errorBox').style.display = 'none';
-    iosLangIdx = 0;
-
-    recognition = buildRecognition();
-    if (!recognition) {
-        showError('Speech recognition not supported here.\n• iPhone: use Safari\n• Desktop: use Google Chrome');
-        return;
-    }
-
     isListening     = true;
     listenStartTime = Date.now();
     if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
-    try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
+
+    if (isIOS) {
+        setUI(true);
+        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+            .then(stream => { micStream = stream; startBurstDetection(stream); })
+            .catch(() => {
+                isListening = false; setUI(false);
+                showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON');
+            });
+    } else {
+        recognition = buildRecognition();
+        if (!recognition) { isListening = false; showError('Speech recognition not supported.\n• Desktop: use Google Chrome'); return; }
+        try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
+    }
 }
 
 function stopListening() {
@@ -755,8 +788,8 @@ function stopListening() {
         listenStartTime = null;
     }
     isListening = false;
+    if (isIOS) stopBurstDetection();
     if (recognition) try { recognition.stop(); } catch(_) {}
-    // Release mic stream on iOS so the green mic indicator disappears
     if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
     if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
     clearTimeout(saveDebounce);
