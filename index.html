@@ -613,8 +613,8 @@ function buildRecognition() {
     showDebug('trying lang: ' + lang + ' [' + (iosLangIdx+1) + '/' + IOS_LANGS.length + '] isIOS=' + isIOS);
 
     const rec = new SR();
-    rec.continuous      = false;   // false works more reliably across all browsers
-    rec.interimResults  = true;    // needed for live simultaneous counting
+    rec.continuous      = true;
+    rec.interimResults  = true;
     rec.maxAlternatives = 1;
     rec.lang            = lang;
 
