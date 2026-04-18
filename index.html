@@ -624,6 +624,8 @@ function buildRecognition() {
         setTimeout(() => { try { rec.start(); } catch(_){} }, 100);
     };
 
+    let resultEventCount = 0;
+
     rec.onresult = (event) => {
         let interim = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -642,6 +644,16 @@ function buildRecognition() {
             }
         }
         if (interim) setTranscript(highlight(interim), true);
+
+        // Proactive restart every 8 result events to prevent iOS engine degradation
+        if (isIOS) {
+            resultEventCount++;
+            if (resultEventCount >= 8) {
+                resultEventCount = 0;
+                creditedPerIndex = {};
+                setTimeout(() => { try { rec.stop(); } catch(_){} }, 50);
+            }
+        }
     };
 
     rec.onerror = (e) => {
