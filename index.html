@@ -416,6 +416,7 @@
 </div>
 
 <div class="error-box" id="errorBox"></div>
+<div id="debugBox" style="margin-top:10px;font-size:0.7rem;color:rgba(255,200,0,0.5);text-align:center;"></div>
 
 <script>
 // ════════════════════════════════════════════════════════
@@ -599,9 +600,7 @@ function buildRecognition() {
     if (!SR) return null;
 
     const rec = new SR();
-    // iOS Safari does not support continuous mode or hi-IN properly.
-    // Use en-IN on iOS (recognises "Radha" well) and hi-IN on desktop Chrome.
-    rec.continuous      = !isIOS;
+    rec.continuous      = !isIOS; // iOS ignores continuous=true
     rec.interimResults  = true;
     rec.maxAlternatives = 1;
     rec.lang            = isIOS ? 'en-IN' : 'hi-IN';
@@ -610,9 +609,7 @@ function buildRecognition() {
 
     rec.onend = () => {
         if (!isListening) { setUI(false); return; }
-        // On iOS restart with a longer gap to avoid repeated permission prompts
-        const delay = isIOS ? 600 : 150;
-        setTimeout(() => { try { rec.start(); } catch(_){} }, delay);
+        setTimeout(() => { try { rec.start(); } catch(_){} }, isIOS ? 800 : 150);
     };
 
     rec.onresult = (event) => {
@@ -623,10 +620,8 @@ function buildRecognition() {
             const found  = countOccurrences(phrase);
             const prev   = creditedPerIndex[i] || 0;
             const delta  = found - prev;
-
             if (delta > 0) addCount(delta);
             creditedPerIndex[i] = found;
-
             if (res.isFinal) {
                 delete creditedPerIndex[i];
                 setTranscript(highlight(phrase), false);
@@ -638,16 +633,20 @@ function buildRecognition() {
     };
 
     rec.onerror = (e) => {
+        // Show the raw error code so we can diagnose
+        showDebug('error: ' + e.error);
         if (e.error === 'no-speech') return;
         if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
             isListening = false;
-            showError(isIOS
-                ? 'Microphone access denied.\n\niPhone: Settings → Safari → Microphone → Allow.\nThen reload this page.'
-                : 'Microphone access denied.\n\nChrome: click the 🔒 icon → Allow microphone.');
             setUI(false);
-            return;
+            showError(
+                'Microphone blocked (error: ' + e.error + ')\n\n' +
+                'On iPhone go to:\nSettings → Safari → scroll down →\n' +
+                '"Microphone" → set to Allow.\n\n' +
+                'Then close and reopen the page.'
+            );
         }
-        // language-not-supported or other errors — let onend restart
+        // other errors (network, language) — let onend auto-restart
     };
 
     return rec;
@@ -687,6 +686,11 @@ function showError(msg) {
     b.style.display = 'block';
 }
 
+function showDebug(msg) {
+    const b = document.getElementById('debugBox');
+    if (b) b.textContent = 'Debug: ' + msg;
+}
+
 // ════════════════════════════════════════════════════════
 // CONTROLS
 // ════════════════════════════════════════════════════════
@@ -699,19 +703,7 @@ async function startListening() {
         return;
     }
 
-    // On iOS: request mic permission via getUserMedia and KEEP the stream open.
-    // Stopping the stream causes iOS to treat every recognition.start() as a
-    // brand-new permission request, showing the dialog every single time.
-    if (isIOS && !micStream) {
-        try {
-            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            // intentionally NOT stopping tracks — keeping stream alive
-        } catch (e) {
-            showError('Microphone access denied.\n\nGo to: iPhone Settings → Privacy & Security → Microphone → Safari → turn ON.\nThen reload this page.');
-            return;
-        }
-    }
-
+    showDebug('starting recognition, isIOS=' + isIOS);
     isListening     = true;
     listenStartTime = Date.now();
     if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
