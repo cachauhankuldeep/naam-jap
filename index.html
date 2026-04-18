@@ -430,6 +430,7 @@ let totalElapsed     = 0;
 let listenStartTime  = null;
 let creditedPerIndex = {};
 let targetReached    = false;
+let micStream        = null; // kept alive on iOS to avoid repeated permission dialogs
 
 const STORAGE_KEY = 'radha_jap_history';
 
@@ -698,14 +699,15 @@ async function startListening() {
         return;
     }
 
-    // On iOS, explicitly request mic permission first via getUserMedia.
-    // Without this step, iOS shows the dialog AFTER recognition already fails.
-    if (isIOS) {
+    // On iOS: request mic permission via getUserMedia and KEEP the stream open.
+    // Stopping the stream causes iOS to treat every recognition.start() as a
+    // brand-new permission request, showing the dialog every single time.
+    if (isIOS && !micStream) {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            stream.getTracks().forEach(t => t.stop()); // permission granted — release stream
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // intentionally NOT stopping tracks — keeping stream alive
         } catch (e) {
-            showError('Microphone access denied.\n\nGo to: iPhone Settings → Safari → Microphone → Allow.\nThen reload this page and try again.');
+            showError('Microphone access denied.\n\nGo to: iPhone Settings → Privacy & Security → Microphone → Safari → turn ON.\nThen reload this page.');
             return;
         }
     }
@@ -723,6 +725,8 @@ function stopListening() {
     }
     isListening = false;
     if (recognition) try { recognition.stop(); } catch(_) {}
+    // Release mic stream on iOS so the green mic indicator disappears
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
     setUI(false);
     updateStats();
     if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
@@ -739,6 +743,7 @@ function resetAll() {
     clearInterval(statsTimer);
     statsTimer  = null;
     recognition = null;
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
 
     document.getElementById('countDisplay').textContent = '0';
     document.getElementById('countOfTarget').textContent = '';
