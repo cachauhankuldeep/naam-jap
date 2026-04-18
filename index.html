@@ -596,19 +596,6 @@ function toggleMonth(mk) {
 // SPEECH RECOGNITION
 // ════════════════════════════════════════════════════════
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-let refreshTimer   = null; // periodic engine restart to prevent iOS degradation
-let transcriptPending = null; // throttle transcript DOM writes
-
-function scheduleRefresh() {
-    clearTimeout(refreshTimer);
-    if (!isListening) return;
-    // Restart every 25s — keeps iOS speech engine fresh and responsive
-    refreshTimer = setTimeout(() => {
-        if (!isListening) return;
-        creditedPerIndex = {}; // clear stale state
-        try { recognition.stop(); } catch(_){} // onend will restart it
-    }, 25000);
-}
 
 function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -620,12 +607,12 @@ function buildRecognition() {
     rec.maxAlternatives = 1;
     rec.lang            = 'hi-IN';
 
-    rec.onstart = () => { setUI(true); scheduleRefresh(); };
+    rec.onstart = () => setUI(true);
 
     rec.onend = () => {
         if (!isListening) { setUI(false); return; }
-        creditedPerIndex = {}; // reset on every restart — prevents index drift
-        setTimeout(() => { try { rec.start(); } catch(_){} }, 150);
+        creditedPerIndex = {};
+        setTimeout(() => { try { rec.start(); } catch(_){} }, 100);
     };
 
     rec.onresult = (event) => {
@@ -640,39 +627,27 @@ function buildRecognition() {
             creditedPerIndex[i] = found;
             if (res.isFinal) {
                 delete creditedPerIndex[i];
-                flushTranscript(highlight(phrase), false);
+                setTranscript(highlight(phrase), false);
             } else {
                 interim += phrase;
             }
         }
-        if (interim) flushTranscript(highlight(interim), true);
+        if (interim) setTranscript(highlight(interim), true);
     };
 
     rec.onerror = (e) => {
         if (e.error === 'no-speech') return;
         if (e.error === 'not-allowed') {
             isListening = false; setUI(false);
-            showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON\n\nThen reload the page.');
-            return;
+            showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON');
         }
         if (e.error === 'service-not-allowed') {
             isListening = false; setUI(false);
-            showError('Speech recognition blocked.\n\nSettings → Screen Time → Content & Privacy Restrictions → Allowed Apps & Features → Siri → ON\n\nThen reload the page.');
+            showError('Speech blocked.\n\nSettings → Screen Time → Content & Privacy Restrictions → Allowed Apps & Features → Siri → ON\n\nThen reload.');
         }
-        // other errors: let onend auto-restart
     };
 
     return rec;
-}
-
-// Throttle transcript DOM updates to max once per 250ms — eliminates render lag
-function flushTranscript(html, isInterim) {
-    if (transcriptPending) return; // already scheduled
-    transcriptPending = setTimeout(() => {
-        transcriptPending = null;
-        const box = document.getElementById('transcript');
-        box.innerHTML = isInterim ? `<span class="interim">${html}</span>` : html;
-    }, 250);
 }
 
 // ════════════════════════════════════════════════════════
@@ -691,15 +666,25 @@ function setTranscript(html, isInterim) {
     box.scrollTop = box.scrollHeight;
 }
 
+let unsavedCount = 0;
+let saveDebounce = null;
+
 function addCount(n) {
     count += n;
-    saveToHistory(n); // save every increment so data isn't lost if tab closes
+    unsavedCount += n;
+
+    // Batch localStorage writes — flush after 3s of no new counts
+    clearTimeout(saveDebounce);
+    saveDebounce = setTimeout(() => {
+        if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
+    }, 3000);
+
     const el = document.getElementById('countDisplay');
     el.textContent = count.toLocaleString('en-IN');
-    el.classList.remove('flash');
-    void el.offsetWidth;
-    el.classList.add('flash');
-    setTimeout(() => el.classList.remove('flash'), 300);
+    // Flash without forcing a synchronous reflow
+    el.style.transform = 'scale(1.2)';
+    el.style.color = '#ffffff';
+    setTimeout(() => { el.style.transform = ''; el.style.color = ''; }, 200);
     if (target) updateProgress();
 }
 
@@ -742,8 +727,8 @@ function stopListening() {
     if (recognition) try { recognition.stop(); } catch(_) {}
     // Release mic stream on iOS so the green mic indicator disappears
     if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-    clearTimeout(refreshTimer); refreshTimer = null;
-    clearTimeout(transcriptPending); transcriptPending = null;
+    if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
+    clearTimeout(saveDebounce);
     setUI(false);
     updateStats();
     if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
