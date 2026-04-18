@@ -439,11 +439,12 @@ const STORAGE_KEY = 'radha_jap_history';
 // WORD MATCHING
 // ════════════════════════════════════════════════════════
 const PATTERNS = [
-    /राधा/g,               // Radha — standard Hindi script
-    /राधे/g,               // Radhe — vocative form, what hi-IN returns for fast chanting
+    /राधा/g,               // Radha — standard
+    /राधे/g,               // Radhe — vocative, iOS returns this for slow chanting
+    /रहा/g,                // iOS hi-IN returns this for fast chanting of Radha
     /\bradha[ae]?\b/gi,    // Roman: Radha, Radhaa, Radhe
     /\braha\b/gi,          // Roman: en-US mis-transcription
-    /\brada\b/gi,          // Roman: another mis-transcription
+    /\brada\b/gi,
 ];
 
 function countOccurrences(text) {
