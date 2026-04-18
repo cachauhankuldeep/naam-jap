@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Radha Naam Jap</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            min-height: 100vh;
+            background: radial-gradient(ellipse at top, #2d0b4e 0%, #1a0533 55%, #0d0220 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: white;
+            padding: 24px 16px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        /* ── Title ── */
+        .deity-name {
+            font-size: 3rem;
+            color: #ffd700;
+            text-align: center;
+            letter-spacing: 8px;
+            text-shadow: 0 0 40px rgba(255,215,0,0.8), 0 0 80px rgba(255,215,0,0.3);
+            margin-bottom: 4px;
+            font-weight: 300;
+        }
+        .subtitle {
+            font-size: 0.7rem;
+            color: rgba(255,215,0,0.45);
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            margin-bottom: 28px;
+        }
+
+        /* ── Counter card ── */
+        .counter-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 24px;
+            padding: 28px 52px 24px;
+            text-align: center;
+            margin-bottom: 16px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 0 60px rgba(255,215,0,0.05), inset 0 1px 0 rgba(255,255,255,0.05);
+            min-width: 240px;
+        }
+        .count-label {
+            font-size: 0.6rem;
+            color: rgba(255,215,0,0.55);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .count-number {
+            font-size: 6rem;
+            font-weight: 700;
+            color: #ffd700;
+            line-height: 1;
+            text-shadow: 0 0 40px rgba(255,215,0,0.6);
+            transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1), color 0.12s ease;
+            user-select: none;
+        }
+        .count-number.flash {
+            transform: scale(1.2);
+            color: #fff;
+            text-shadow: 0 0 60px rgba(255,255,255,0.9);
+        }
+        .count-of-target {
+            font-size: 0.8rem;
+            color: rgba(255,215,0,0.45);
+            margin-top: 6px;
+            letter-spacing: 1px;
+        }
+
+        /* ── Progress bar ── */
+        .progress-wrap {
+            width: 100%;
+            max-width: 340px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .progress-wrap.visible { display: block; }
+        .progress-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.68rem;
+            color: rgba(255,215,0,0.5);
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+        }
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff8c42, #ffd700);
+            border-radius: 99px;
+            width: 0%;
+            transition: width 0.4s ease;
+            box-shadow: 0 0 8px rgba(255,215,0,0.5);
+        }
+        .goal-done-msg {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #ffd700;
+            letter-spacing: 2px;
+            margin-top: 10px;
+            text-shadow: 0 0 20px rgba(255,215,0,0.8);
+            display: none;
+        }
+
+        /* ── Target input ── */
+        .target-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 22px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .target-label {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.45);
+            letter-spacing: 1px;
+        }
+        .target-input {
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,215,0,0.25);
+            border-radius: 10px;
+            color: #ffd700;
+            font-size: 0.9rem;
+            padding: 7px 12px;
+            width: 110px;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .target-input:focus { border-color: rgba(255,215,0,0.7); }
+        .target-input::placeholder { color: rgba(255,215,0,0.25); }
+        .btn-set-target {
+            padding: 7px 16px;
+            border: 1px solid rgba(255,215,0,0.35);
+            border-radius: 10px;
+            background: rgba(255,215,0,0.1);
+            color: #ffd700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-set-target:hover { background: rgba(255,215,0,0.2); }
+
+        /* ── Status ── */
+        .status-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 18px;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.45);
+        }
+        .dot {
+            width: 9px; height: 9px;
+            border-radius: 50%;
+            background: #444;
+            flex-shrink: 0;
+            transition: background 0.3s, box-shadow 0.3s;
+        }
+        .dot.on {
+            background: #4ade80;
+            box-shadow: 0 0 10px #4ade80, 0 0 20px rgba(74,222,128,0.4);
+            animation: pdot 2s infinite;
+        }
+        @keyframes pdot { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+        /* ── Controls ── */
+        .controls {
+            display: flex;
+            gap: 11px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn {
+            padding: 13px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            letter-spacing: 0.5px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active { transform: scale(0.94); }
+        .btn-start {
+            background: linear-gradient(135deg, #ff8c42, #ffd700);
+            color: #1a0533;
+            box-shadow: 0 4px 20px rgba(255,215,0,0.3);
+        }
+        .btn-stop {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            box-shadow: 0 4px 20px rgba(139,92,246,0.3);
+        }
+        .btn-reset {
+            background: rgba(255,255,255,0.07);
+            color: rgba(255,255,255,0.65);
+            border: 1px solid rgba(255,255,255,0.13);
+        }
+
+        /* ── Transcript ── */
+        .transcript-section { width: 100%; max-width: 380px; margin-bottom: 8px; }
+        .section-label {
+            font-size: 0.62rem;
+            color: rgba(255,255,255,0.28);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 7px;
+        }
+        .transcript-box {
+            background: rgba(0,0,0,0.28);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+            padding: 13px 15px;
+            min-height: 66px;
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 0.88rem;
+            color: rgba(255,255,255,0.5);
+            line-height: 1.65;
+            word-break: break-word;
+        }
+        .transcript-box .hi { color: #ffd700; font-weight: 700; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+        .interim { opacity: 0.4; font-style: italic; }
+
+        /* ── Stats ── */
+        .stats {
+            margin-top: 10px;
+            font-size: 0.7rem;
+            color: rgba(255,215,0,0.32);
+            letter-spacing: 1px;
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        /* ── History ── */
+        .history-section { width: 100%; max-width: 380px; }
+        .history-toggle {
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,215,0,0.15);
+            border-radius: 14px;
+            padding: 12px 18px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: rgba(255,215,0,0.6);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            transition: background 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .history-toggle:hover { background: rgba(255,255,255,0.07); }
+        .history-arrow { transition: transform 0.25s; font-size: 0.7rem; }
+        .history-arrow.open { transform: rotate(180deg); }
+
+        .history-panel {
+            display: none;
+            margin-top: 10px;
+            background: rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .history-panel.open { display: block; }
+
+        .month-block { border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .month-block:last-child { border-bottom: none; }
+
+        .month-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .month-header:hover { background: rgba(255,255,255,0.04); }
+        .month-name {
+            font-size: 0.8rem;
+            color: #ffd700;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+        .month-total {
+            font-size: 0.75rem;
+            color: rgba(255,215,0,0.55);
+        }
+        .month-arrow { font-size: 0.6rem; color: rgba(255,215,0,0.4); transition: transform 0.2s; }
+        .month-arrow.open { transform: rotate(180deg); }
+
+        .day-list { display: none; padding: 0 16px 10px; }
+        .day-list.open { display: block; }
+        .day-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.78rem;
+        }
+        .day-row:last-child { border-bottom: none; }
+        .day-name { color: rgba(255,255,255,0.5); }
+        .day-count { color: rgba(255,215,0,0.7); font-weight: 600; }
+
+        .history-empty {
+            padding: 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.25);
+            letter-spacing: 1px;
+        }
+
+        /* ── Error ── */
+        .error-box {
+            margin-top: 14px;
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 0.8rem;
+            color: #fca5a5;
+            text-align: center;
+            max-width: 340px;
+            line-height: 1.5;
+            display: none;
+        }
+
+        @media (max-width: 360px) {
+            .deity-name { font-size: 2.4rem; }
+            .count-number { font-size: 5rem; }
+            .counter-card { padding: 22px 32px 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="deity-name">राधा</div>
+<div class="subtitle">Naam Jap Counter</div>
+
+<!-- Counter -->
+<div class="counter-card">
+    <div class="count-label">Radha Count</div>
+    <div class="count-number" id="countDisplay">0</div>
+    <div class="count-of-target" id="countOfTarget"></div>
+</div>
+
+<!-- Progress bar -->
+<div class="progress-wrap" id="progressWrap">
+    <div class="progress-labels">
+        <span id="progressLeft">0</span>
+        <span id="progressPct">0%</span>
+        <span id="progressRight">—</span>
+    </div>
+    <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div class="goal-done-msg" id="goalDoneMsg">🙏 लक्ष्य पूर्ण हो गया!</div>
+</div>
+
+<!-- Target -->
+<div class="target-row">
+    <span class="target-label">Target</span>
+    <input class="target-input" id="targetInput" type="number" min="1" placeholder="e.g. 1080" />
+    <button class="btn-set-target" onclick="setTarget()">Set</button>
+</div>
+
+<!-- Status -->
+<div class="status-row">
+    <div class="dot" id="dot"></div>
+    <span id="statusText">Tap Start to begin</span>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+    <button class="btn btn-start" id="startBtn" onclick="startListening()">▶ Start</button>
+    <button class="btn btn-stop"  id="stopBtn"  onclick="stopListening()" style="display:none">⏹ Stop</button>
+    <button class="btn btn-reset" onclick="resetAll()">↺ Reset</button>
+</div>
+
+<!-- Transcript -->
+<div class="transcript-section">
+    <div class="section-label">Live Transcript (Hindi)</div>
+    <div class="transcript-box" id="transcript">सुनने के लिए Start दबाएँ…</div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<!-- History -->
+<div class="history-section">
+    <div class="history-toggle" onclick="toggleHistory()">
+        <span>Session History</span>
+        <span class="history-arrow" id="histArrow">▼</span>
+    </div>
+    <div class="history-panel" id="historyPanel"></div>
+</div>
+
+<div class="error-box" id="errorBox"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════
+let recognition      = null;
+let count            = 0;
+let target           = 0;
+let isListening      = false;
+let statsTimer       = null;
+let totalElapsed     = 0;
+let listenStartTime  = null;
+let creditedPerIndex = {};
+let targetReached    = false;
+
+const STORAGE_KEY = 'radha_jap_history';
+
+// ════════════════════════════════════════════════════════
+// WORD MATCHING
+// ════════════════════════════════════════════════════════
+const PATTERNS = [
+    /राधा/g,                 // Devanagari (primary — hi-IN lang)
+    /\bradha[ae]?\b/gi       // Romanised fallback
+];
+
+function countOccurrences(text) {
+    let n = 0;
+    for (const p of PATTERNS) { const m = text.match(p); if (m) n += m.length; }
+    return n;
+}
+
+function highlight(text) {
+    return text
+        .replace(/राधा/g,           '<span class="hi">राधा</span>')
+        .replace(/\bradha[ae]?\b/gi, '<span class="hi">$&</span>');
+}
+
+// ════════════════════════════════════════════════════════
+// SESSION TIMER (only counts while listening)
+// ════════════════════════════════════════════════════════
+function getElapsed() {
+    if (listenStartTime) return totalElapsed + Math.floor((Date.now() - listenStartTime) / 1000);
+    return totalElapsed;
+}
+
+function updateStats() {
+    const e = getElapsed();
+    if (e === 0) return;
+    const m = Math.floor(e / 60), s = e % 60;
+    document.getElementById('stats').textContent = `Session: ${m}m ${s < 10 ? '0'+s : s}s`;
+}
+
+// ════════════════════════════════════════════════════════
+// TARGET & PROGRESS
+// ════════════════════════════════════════════════════════
+function setTarget() {
+    const val = parseInt(document.getElementById('targetInput').value, 10);
+    if (!val || val < 1) { alert('Please enter a valid target number.'); return; }
+    target       = val;
+    targetReached = false;
+    document.getElementById('goalDoneMsg').style.display = 'none';
+    document.getElementById('progressWrap').classList.add('visible');
+    updateProgress();
+}
+
+function updateProgress() {
+    if (!target) return;
+    const pct = Math.min(100, Math.round((count / target) * 100));
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLeft').textContent = count.toLocaleString('en-IN');
+    document.getElementById('progressPct').textContent  = pct + '%';
+    document.getElementById('progressRight').textContent = target.toLocaleString('en-IN');
+    document.getElementById('countOfTarget').textContent = `of ${target.toLocaleString('en-IN')}`;
+
+    if (count >= target && !targetReached) {
+        targetReached = true;
+        document.getElementById('goalDoneMsg').style.display = 'block';
+    }
+}
+
+// ════════════════════════════════════════════════════════
+// HISTORY  (localStorage, keyed by YYYY-MM-DD)
+// ════════════════════════════════════════════════════════
+function todayKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,'0');
+    const day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+}
+
+function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+}
+
+function saveToHistory(n) {
+    if (n <= 0) return;
+    const hist = loadHistory();
+    const key  = todayKey();
+    hist[key]  = (hist[key] || 0) + n;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(hist));
+}
+
+const MONTHS = ['January','February','March','April','May','June',
+                'July','August','September','October','November','December'];
+
+function renderHistory() {
+    const panel = document.getElementById('historyPanel');
+    const hist  = loadHistory();
+    const keys  = Object.keys(hist).sort().reverse(); // newest first
+
+    if (keys.length === 0) {
+        panel.innerHTML = '<div class="history-empty">No sessions recorded yet.</div>';
+        return;
+    }
+
+    // Group by YYYY-MM
+    const byMonth = {};
+    for (const k of keys) {
+        const [y, m] = k.split('-');
+        const mk = `${y}-${m}`;
+        if (!byMonth[mk]) byMonth[mk] = [];
+        byMonth[mk].push(k);
+    }
+
+    let html = '';
+    for (const mk of Object.keys(byMonth).sort().reverse()) {
+        const [y, m] = mk.split('-');
+        const monthLabel = `${MONTHS[parseInt(m,10)-1]} ${y}`;
+        const days = byMonth[mk];
+        const monthTotal = days.reduce((sum, d) => sum + hist[d], 0);
+
+        html += `<div class="month-block">
+            <div class="month-header" onclick="toggleMonth('${mk}')">
+                <span class="month-name">${monthLabel}</span>
+                <span style="display:flex;align-items:center;gap:10px">
+                    <span class="month-total">${monthTotal.toLocaleString('en-IN')}</span>
+                    <span class="month-arrow" id="marrow-${mk}">▼</span>
+                </span>
+            </div>
+            <div class="day-list" id="days-${mk}">`;
+
+        for (const dk of days) {
+            const [dy, dm, dd] = dk.split('-');
+            const dateObj  = new Date(parseInt(dy), parseInt(dm)-1, parseInt(dd));
+            const dayName  = dateObj.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+            html += `<div class="day-row">
+                <span class="day-name">${dayName}</span>
+                <span class="day-count">${hist[dk].toLocaleString('en-IN')}</span>
+            </div>`;
+        }
+        html += `</div></div>`;
+    }
+
+    panel.innerHTML = html;
+}
+
+function toggleHistory() {
+    const panel = document.getElementById('historyPanel');
+    const arrow = document.getElementById('histArrow');
+    const open  = panel.classList.toggle('open');
+    arrow.classList.toggle('open', open);
+    if (open) renderHistory();
+}
+
+function toggleMonth(mk) {
+    const list  = document.getElementById(`days-${mk}`);
+    const arrow = document.getElementById(`marrow-${mk}`);
+    const open  = list.classList.toggle('open');
+    arrow.classList.toggle('open', open);
+}
+
+// ════════════════════════════════════════════════════════
+// SPEECH RECOGNITION
+// ════════════════════════════════════════════════════════
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+function buildRecognition() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return null;
+
+    const rec = new SR();
+    // iOS Safari does not support continuous mode or hi-IN properly.
+    // Use en-IN on iOS (recognises "Radha" well) and hi-IN on desktop Chrome.
+    rec.continuous      = !isIOS;
+    rec.interimResults  = true;
+    rec.maxAlternatives = 1;
+    rec.lang            = isIOS ? 'en-IN' : 'hi-IN';
+
+    rec.onstart = () => setUI(true);
+
+    rec.onend = () => {
+        if (!isListening) { setUI(false); return; }
+        // On iOS restart with a longer gap to avoid repeated permission prompts
+        const delay = isIOS ? 600 : 150;
+        setTimeout(() => { try { rec.start(); } catch(_){} }, delay);
+    };
+
+    rec.onresult = (event) => {
+        let interim = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const res    = event.results[i];
+            const phrase = res[0].transcript;
+            const found  = countOccurrences(phrase);
+            const prev   = creditedPerIndex[i] || 0;
+            const delta  = found - prev;
+
+            if (delta > 0) addCount(delta);
+            creditedPerIndex[i] = found;
+
+            if (res.isFinal) {
+                delete creditedPerIndex[i];
+                setTranscript(highlight(phrase), false);
+            } else {
+                interim += phrase;
+            }
+        }
+        if (interim) setTranscript(highlight(interim), true);
+    };
+
+    rec.onerror = (e) => {
+        if (e.error === 'no-speech') return;
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            isListening = false;
+            showError(isIOS
+                ? 'Microphone access denied.\n\niPhone: Settings → Safari → Microphone → Allow.\nThen reload this page.'
+                : 'Microphone access denied.\n\nChrome: click the 🔒 icon → Allow microphone.');
+            setUI(false);
+            return;
+        }
+        // language-not-supported or other errors — let onend restart
+    };
+
+    return rec;
+}
+
+// ════════════════════════════════════════════════════════
+// UI HELPERS
+// ════════════════════════════════════════════════════════
+function setUI(on) {
+    document.getElementById('dot').classList.toggle('on', on);
+    document.getElementById('statusText').textContent = on ? 'सुन रहा हूँ…' : 'रुक गया';
+    document.getElementById('startBtn').style.display = on ? 'none' : 'inline-block';
+    document.getElementById('stopBtn').style.display  = on ? 'inline-block' : 'none';
+}
+
+function setTranscript(html, isInterim) {
+    const box = document.getElementById('transcript');
+    box.innerHTML = isInterim ? `<span class="interim">${html}</span>` : html;
+    box.scrollTop = box.scrollHeight;
+}
+
+function addCount(n) {
+    count += n;
+    saveToHistory(n); // save every increment so data isn't lost if tab closes
+    const el = document.getElementById('countDisplay');
+    el.textContent = count.toLocaleString('en-IN');
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+    setTimeout(() => el.classList.remove('flash'), 300);
+    if (target) updateProgress();
+}
+
+function showError(msg) {
+    const b = document.getElementById('errorBox');
+    b.textContent = msg;
+    b.style.display = 'block';
+}
+
+// ════════════════════════════════════════════════════════
+// CONTROLS
+// ════════════════════════════════════════════════════════
+function startListening() {
+    document.getElementById('errorBox').style.display = 'none';
+    if (!recognition) recognition = buildRecognition();
+    if (!recognition) {
+        showError('Speech recognition not supported here.\n• iPhone: use Safari\n• Desktop: use Google Chrome');
+        return;
+    }
+    isListening    = true;
+    listenStartTime = Date.now();
+    if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
+    try { recognition.start(); } catch(_) {}
+}
+
+function stopListening() {
+    if (listenStartTime) {
+        totalElapsed   += Math.floor((Date.now() - listenStartTime) / 1000);
+        listenStartTime = null;
+    }
+    isListening = false;
+    if (recognition) try { recognition.stop(); } catch(_) {}
+    setUI(false);
+    updateStats();
+    if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
+}
+
+function resetAll() {
+    stopListening();
+    count            = 0;
+    target           = 0;
+    targetReached    = false;
+    totalElapsed     = 0;
+    listenStartTime  = null;
+    creditedPerIndex = {};
+    clearInterval(statsTimer);
+    statsTimer  = null;
+    recognition = null;
+
+    document.getElementById('countDisplay').textContent = '0';
+    document.getElementById('countOfTarget').textContent = '';
+    document.getElementById('targetInput').value = '';
+    document.getElementById('progressWrap').classList.remove('visible');
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('goalDoneMsg').style.display = 'none';
+    document.getElementById('transcript').textContent = 'सुनने के लिए Start दबाएँ…';
+    document.getElementById('stats').textContent = '';
+    document.getElementById('errorBox').style.display = 'none';
+    document.getElementById('statusText').textContent = 'Tap Start to begin';
+}
+</script>
+</body>
+</html>
