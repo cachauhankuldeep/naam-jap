@@ -611,7 +611,7 @@ function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return null;
 
-    const lang = isIOS ? IOS_LANGS[iosLangIdx] : 'hi-IN';
+    const lang = 'hi-IN'; // Hindi for all platforms
     showDebug('trying lang: ' + lang + ' [' + (iosLangIdx+1) + '/' + IOS_LANGS.length + '] isIOS=' + isIOS);
 
     const rec = new SR();
@@ -624,7 +624,7 @@ function buildRecognition() {
 
     rec.onend = () => {
         if (!isListening) { setUI(false); return; }
-        setTimeout(() => { try { rec.start(); } catch(_){} }, isIOS ? 800 : 150);
+        setTimeout(() => { try { rec.start(); } catch(_){} }, 150);
     };
 
     rec.onresult = (event) => {
