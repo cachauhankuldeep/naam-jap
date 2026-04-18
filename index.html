@@ -605,10 +605,8 @@ function toggleMonth(mk) {
 // SPEECH RECOGNITION
 // ════════════════════════════════════════════════════════
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-let iosRestartTimer = null;
 
 function freshStart() {
-    // Always creates a brand-new SR instance — never reuses stale iOS engine state
     recognition = buildRecognition();
     if (recognition) try { recognition.start(); } catch(_) {}
 }
@@ -618,54 +616,58 @@ function buildRecognition() {
     if (!SR) return null;
 
     const rec = new SR();
-    rec.continuous      = true;
-    rec.interimResults  = true;
-    rec.maxAlternatives = 1;
-    rec.lang            = 'hi-IN';
+    // iOS: one utterance at a time — avoids engine buffering/degradation on repetition
+    // Mac: continuous works fine
+    rec.continuous      = !isIOS;
+    rec.interimResults  = !isIOS;
+    rec.maxAlternatives = isIOS ? 3 : 1;
+    rec.lang            = isIOS ? 'en-US' : 'hi-IN'; // en-US more reliable on English iPhones
 
     rec.onstart = () => setUI(true);
 
     rec.onend = () => {
         if (!isListening) { setUI(false); return; }
         creditedPerIndex = {};
-        // Create a completely fresh SR instance — not rec.start() — to fully reset iOS engine
-        setTimeout(freshStart, 150);
+        setTimeout(freshStart, isIOS ? 80 : 150);
     };
 
-    let resultEventCount = 0;
-
     rec.onresult = (event) => {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            const res    = event.results[i];
-            const phrase = res[0].transcript;
-            const found  = countOccurrences(phrase);
-            const prev   = creditedPerIndex[i] || 0;
-            const delta  = found - prev;
-            if (delta > 0) addCount(delta);
-            creditedPerIndex[i] = found;
-            if (res.isFinal) {
-                delete creditedPerIndex[i];
-                setTranscript(highlight(phrase), false);
-            } else {
-                interim += phrase;
-            }
-        }
-        if (interim) setTranscript(highlight(interim), true);
-
-        // Count-based proactive restart every 5 result events (backup for fast chanting)
         if (isIOS) {
-            resultEventCount++;
-            if (resultEventCount >= 5) {
-                resultEventCount = 0;
-                creditedPerIndex = {};
-                setTimeout(() => { try { rec.stop(); } catch(_){} }, 50);
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const res = event.results[i];
+                if (!res.isFinal) continue;
+                // Check all alternatives — take the one with the most matches
+                let bestCount = 0, bestPhrase = res[0].transcript;
+                for (let j = 0; j < res.length; j++) {
+                    const c = countOccurrences(res[j].transcript);
+                    if (c > bestCount) { bestCount = c; bestPhrase = res[j].transcript; }
+                }
+                setTranscript(highlight(bestPhrase), false);
+                if (bestCount > 0) addCount(bestCount);
             }
+        } else {
+            let interim = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const res    = event.results[i];
+                const phrase = res[0].transcript;
+                const found  = countOccurrences(phrase);
+                const prev   = creditedPerIndex[i] || 0;
+                const delta  = found - prev;
+                if (delta > 0) addCount(delta);
+                creditedPerIndex[i] = found;
+                if (res.isFinal) {
+                    delete creditedPerIndex[i];
+                    setTranscript(highlight(phrase), false);
+                } else {
+                    interim += phrase;
+                }
+            }
+            if (interim) setTranscript(highlight(interim), true);
         }
     };
 
     rec.onerror = (e) => {
-        if (e.error === 'no-speech') return;
+        if (e.error === 'no-speech') return; // onend will auto-restart
         if (e.error === 'not-allowed') {
             isListening = false; setUI(false);
             showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON');
@@ -745,16 +747,6 @@ function startListening() {
     listenStartTime = Date.now();
     if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
     try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
-
-    // Time-based proactive restart every 6s — keeps iOS engine fresh for slow chanting
-    if (isIOS) {
-        clearInterval(iosRestartTimer);
-        iosRestartTimer = setInterval(() => {
-            if (!isListening || !recognition) return;
-            creditedPerIndex = {};
-            try { recognition.stop(); } catch(_) {}
-        }, 6000);
-    }
 }
 
 function stopListening() {
@@ -763,7 +755,6 @@ function stopListening() {
         listenStartTime = null;
     }
     isListening = false;
-    clearInterval(iosRestartTimer); iosRestartTimer = null;
     if (recognition) try { recognition.stop(); } catch(_) {}
     // Release mic stream on iOS so the green mic indicator disappears
     if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
