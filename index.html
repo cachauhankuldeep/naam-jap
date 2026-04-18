@@ -6,7 +6,6 @@
     <title>Radha Naam Jap</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
             min-height: 100vh;
             background: radial-gradient(ellipse at top, #2d0b4e 0%, #1a0533 55%, #0d0220 100%);
@@ -18,8 +17,6 @@
             align-items: center;
             gap: 0;
         }
-
-        /* ── Title ── */
         .deity-name {
             font-size: 3rem;
             color: #ffd700;
@@ -36,8 +33,6 @@
             text-transform: uppercase;
             margin-bottom: 28px;
         }
-
-        /* ── Counter card ── */
         .counter-card {
             background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,215,0,0.2);
@@ -76,8 +71,6 @@
             margin-top: 6px;
             letter-spacing: 1px;
         }
-
-        /* ── Progress bar ── */
         .progress-wrap {
             width: 100%;
             max-width: 340px;
@@ -117,8 +110,6 @@
             text-shadow: 0 0 20px rgba(255,215,0,0.8);
             display: none;
         }
-
-        /* ── Target input ── */
         .target-row {
             display: flex;
             align-items: center;
@@ -145,7 +136,6 @@
             transition: border-color 0.2s;
         }
         .target-input:focus { border-color: rgba(255,215,0,0.7); }
-        .target-input::placeholder { color: rgba(255,215,0,0.25); }
         .btn-set-target {
             padding: 7px 16px;
             border: 1px solid rgba(255,215,0,0.35);
@@ -156,9 +146,6 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        .btn-set-target:hover { background: rgba(255,215,0,0.2); }
-
-        /* ── Status ── */
         .status-row {
             display: flex;
             align-items: center;
@@ -180,8 +167,6 @@
             animation: pdot 2s infinite;
         }
         @keyframes pdot { 0%,100%{opacity:1} 50%{opacity:0.35} }
-
-        /* ── Controls ── */
         .controls {
             display: flex;
             gap: 11px;
@@ -216,8 +201,6 @@
             color: rgba(255,255,255,0.65);
             border: 1px solid rgba(255,255,255,0.13);
         }
-
-        /* ── Transcript ── */
         .transcript-section { width: 100%; max-width: 380px; margin-bottom: 8px; }
         .section-label {
             font-size: 0.62rem;
@@ -241,8 +224,6 @@
         }
         .transcript-box .hi { color: #ffd700; font-weight: 700; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
         .interim { opacity: 0.4; font-style: italic; }
-
-        /* ── Stats ── */
         .stats {
             margin-top: 10px;
             font-size: 0.7rem;
@@ -251,8 +232,6 @@
             text-align: center;
             margin-bottom: 28px;
         }
-
-        /* ── History ── */
         .history-section { width: 100%; max-width: 380px; }
         .history-toggle {
             width: 100%;
@@ -271,10 +250,8 @@
             transition: background 0.2s;
             -webkit-tap-highlight-color: transparent;
         }
-        .history-toggle:hover { background: rgba(255,255,255,0.07); }
         .history-arrow { transition: transform 0.25s; font-size: 0.7rem; }
         .history-arrow.open { transform: rotate(180deg); }
-
         .history-panel {
             display: none;
             margin-top: 10px;
@@ -284,10 +261,8 @@
             overflow: hidden;
         }
         .history-panel.open { display: block; }
-
         .month-block { border-bottom: 1px solid rgba(255,255,255,0.05); }
         .month-block:last-child { border-bottom: none; }
-
         .month-header {
             display: flex;
             justify-content: space-between;
@@ -296,7 +271,6 @@
             cursor: pointer;
             transition: background 0.15s;
         }
-        .month-header:hover { background: rgba(255,255,255,0.04); }
         .month-name {
             font-size: 0.8rem;
             color: #ffd700;
@@ -309,7 +283,6 @@
         }
         .month-arrow { font-size: 0.6rem; color: rgba(255,215,0,0.4); transition: transform 0.2s; }
         .month-arrow.open { transform: rotate(180deg); }
-
         .day-list { display: none; padding: 0 16px 10px; }
         .day-list.open { display: block; }
         .day-row {
@@ -319,10 +292,8 @@
             border-bottom: 1px solid rgba(255,255,255,0.04);
             font-size: 0.78rem;
         }
-        .day-row:last-child { border-bottom: none; }
         .day-name { color: rgba(255,255,255,0.5); }
         .day-count { color: rgba(255,215,0,0.7); font-weight: 600; }
-
         .history-empty {
             padding: 20px;
             text-align: center;
@@ -330,8 +301,6 @@
             color: rgba(255,255,255,0.25);
             letter-spacing: 1px;
         }
-
-        /* ── Error ── */
         .error-box {
             margin-top: 14px;
             background: rgba(239,68,68,0.1);
@@ -345,7 +314,6 @@
             line-height: 1.5;
             display: none;
         }
-
         @media (max-width: 360px) {
             .deity-name { font-size: 2.4rem; }
             .count-number { font-size: 5rem; }
@@ -358,14 +326,12 @@
 <div class="deity-name">राधा</div>
 <div class="subtitle">Naam Jap Counter</div>
 
-<!-- Counter -->
 <div class="counter-card">
     <div class="count-label">Radha Count</div>
     <div class="count-number" id="countDisplay">0</div>
     <div class="count-of-target" id="countOfTarget"></div>
 </div>
 
-<!-- Progress bar -->
 <div class="progress-wrap" id="progressWrap">
     <div class="progress-labels">
         <span id="progressLeft">0</span>
@@ -378,27 +344,23 @@
     <div class="goal-done-msg" id="goalDoneMsg">🙏 लक्ष्य पूर्ण हो गया!</div>
 </div>
 
-<!-- Target -->
 <div class="target-row">
     <span class="target-label">Target</span>
     <input class="target-input" id="targetInput" type="number" min="1" placeholder="e.g. 1080" />
     <button class="btn-set-target" onclick="setTarget()">Set</button>
 </div>
 
-<!-- Status -->
 <div class="status-row">
     <div class="dot" id="dot"></div>
     <span id="statusText">Tap Start to begin</span>
 </div>
 
-<!-- Controls -->
 <div class="controls">
     <button class="btn btn-start" id="startBtn" onclick="startListening()">▶ Start</button>
     <button class="btn btn-stop"  id="stopBtn"  onclick="stopListening()" style="display:none">⏹ Stop</button>
     <button class="btn btn-reset" onclick="resetAll()">↺ Reset</button>
 </div>
 
-<!-- Transcript -->
 <div class="transcript-section">
     <div class="section-label">Live Transcript (Hindi)</div>
     <div class="transcript-box" id="transcript">सुनने के लिए Start दबाएँ…</div>
@@ -406,7 +368,6 @@
 
 <div class="stats" id="stats"></div>
 
-<!-- History -->
 <div class="history-section">
     <div class="history-toggle" onclick="toggleHistory()">
         <span>Session History</span>
@@ -416,12 +377,9 @@
 </div>
 
 <div class="error-box" id="errorBox"></div>
-<div id="debugBox" style="margin-top:10px;font-size:0.7rem;color:rgba(255,200,0,0.5);text-align:center;"></div>
 
 <script>
-// ════════════════════════════════════════════════════════
 // STATE
-// ════════════════════════════════════════════════════════
 let recognition      = null;
 let count            = 0;
 let target           = 0;
@@ -431,27 +389,16 @@ let totalElapsed     = 0;
 let listenStartTime  = null;
 let creditedPerIndex = {};
 let targetReached    = false;
-let micStream        = null; // kept alive on iOS to avoid repeated permission dialogs
 
 const STORAGE_KEY = 'radha_jap_history';
 
-// ════════════════════════════════════════════════════════
-// WORD MATCHING
-// ════════════════════════════════════════════════════════
-// Every way a speech engine can transcribe Radha / Radhe
+// PATTERNS - Exhaustive list for all possible speech engine outputs
 const PATTERNS = [
-    // Devanagari
-    /राधा/g,
-    /राधे/g,
-    /राधी/g,
-    /रधा/g,
-    /रहा/g,
-    /रहे/g,
-    // Roman
-    /\b(?:radha|radhaa|radhae|radhe|radhi|radhai|radhey|radho)\b/gi,
-    /\b(?:rada|raada|rade|radi|rado)\b/gi,
-    /\b(?:raha|rahaa|rahe|rahi|raho|rahay)\b/gi,
-    /\b(?:ratha|rathe|rathi|ratho)\b/gi,
+    /राधा/g, /राधे/g, /राधी/g, /रधा/g, /रहा/g, /रहे/g, // Devanagari
+    /\b(?:radha|radhaa|radhae|radhe|radhi|radhai|radhey|radho)\b/gi, // Roman Standard
+    /\b(?:rada|raada|rade|radi|rado)\b/gi, // Roman Variations
+    /\b(?:raha|rahaa|rahe|rahi|raho|rahay)\b/gi, // Roman Mis-transcriptions
+    /\b(?:ratha|rathe|rathi|ratho)\b/gi, // Phonetic variants
 ];
 
 function countOccurrences(text) {
@@ -461,14 +408,14 @@ function countOccurrences(text) {
 }
 
 function highlight(text) {
-    return text
-        .replace(/राधा/g,           '<span class="hi">राधा</span>')
-        .replace(/\bradha[ae]?\b/gi, '<span class="hi">$&</span>');
+    let highlighted = text;
+    // Highlight all matches for visual feedback
+    for (const p of PATTERNS) {
+        highlighted = highlighted.replace(p, '<span class="hi">$&</span>');
+    }
+    return highlighted;
 }
 
-// ════════════════════════════════════════════════════════
-// SESSION TIMER (only counts while listening)
-// ════════════════════════════════════════════════════════
 function getElapsed() {
     if (listenStartTime) return totalElapsed + Math.floor((Date.now() - listenStartTime) / 1000);
     return totalElapsed;
@@ -481,9 +428,6 @@ function updateStats() {
     document.getElementById('stats').textContent = `Session: ${m}m ${s < 10 ? '0'+s : s}s`;
 }
 
-// ════════════════════════════════════════════════════════
-// TARGET & PROGRESS
-// ════════════════════════════════════════════════════════
 function setTarget() {
     const val = parseInt(document.getElementById('targetInput').value, 10);
     if (!val || val < 1) { alert('Please enter a valid target number.'); return; }
@@ -509,15 +453,9 @@ function updateProgress() {
     }
 }
 
-// ════════════════════════════════════════════════════════
-// HISTORY  (localStorage, keyed by YYYY-MM-DD)
-// ════════════════════════════════════════════════════════
 function todayKey() {
     const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth()+1).padStart(2,'0');
-    const day = String(d.getDate()).padStart(2,'0');
-    return `${y}-${m}-${day}`;
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
 function loadHistory() {
@@ -532,20 +470,16 @@ function saveToHistory(n) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(hist));
 }
 
-const MONTHS = ['January','February','March','April','May','June',
-                'July','August','September','October','November','December'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function renderHistory() {
     const panel = document.getElementById('historyPanel');
     const hist  = loadHistory();
-    const keys  = Object.keys(hist).sort().reverse(); // newest first
-
+    const keys  = Object.keys(hist).sort().reverse();
     if (keys.length === 0) {
         panel.innerHTML = '<div class="history-empty">No sessions recorded yet.</div>';
         return;
     }
-
-    // Group by YYYY-MM
     const byMonth = {};
     for (const k of keys) {
         const [y, m] = k.split('-');
@@ -553,14 +487,12 @@ function renderHistory() {
         if (!byMonth[mk]) byMonth[mk] = [];
         byMonth[mk].push(k);
     }
-
     let html = '';
     for (const mk of Object.keys(byMonth).sort().reverse()) {
         const [y, m] = mk.split('-');
         const monthLabel = `${MONTHS[parseInt(m,10)-1]} ${y}`;
         const days = byMonth[mk];
         const monthTotal = days.reduce((sum, d) => sum + hist[d], 0);
-
         html += `<div class="month-block">
             <div class="month-header" onclick="toggleMonth('${mk}')">
                 <span class="month-name">${monthLabel}</span>
@@ -570,7 +502,6 @@ function renderHistory() {
                 </span>
             </div>
             <div class="day-list" id="days-${mk}">`;
-
         for (const dk of days) {
             const [dy, dm, dd] = dk.split('-');
             const dateObj  = new Date(parseInt(dy), parseInt(dm)-1, parseInt(dd));
@@ -582,7 +513,6 @@ function renderHistory() {
         }
         html += `</div></div>`;
     }
-
     panel.innerHTML = html;
 }
 
@@ -601,14 +531,7 @@ function toggleMonth(mk) {
     arrow.classList.toggle('open', open);
 }
 
-// ════════════════════════════════════════════════════════
-// SPEECH RECOGNITION
-// ════════════════════════════════════════════════════════
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-let iosRestartTimer = null;
-
 function freshStart() {
-    // Always creates a brand-new SR instance — never reuses stale iOS engine state
     recognition = buildRecognition();
     if (recognition) try { recognition.start(); } catch(_) {}
 }
@@ -616,24 +539,17 @@ function freshStart() {
 function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return null;
-
     const rec = new SR();
     rec.continuous      = true;
     rec.interimResults  = true;
     rec.maxAlternatives = 1;
     rec.lang            = 'hi-IN';
-
     rec.onstart = () => setUI(true);
-
     rec.onend = () => {
         if (!isListening) { setUI(false); return; }
         creditedPerIndex = {};
-        // Create a completely fresh SR instance — not rec.start() — to fully reset iOS engine
         setTimeout(freshStart, 150);
     };
-
-    let resultEventCount = 0;
-
     rec.onresult = (event) => {
         let interim = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -647,41 +563,24 @@ function buildRecognition() {
             if (res.isFinal) {
                 delete creditedPerIndex[i];
                 setTranscript(highlight(phrase), false);
-            } else {
-                interim += phrase;
-            }
+            } else { interim += phrase; }
         }
         if (interim) setTranscript(highlight(interim), true);
-
-        // Count-based proactive restart every 5 result events (backup for fast chanting)
-        if (isIOS) {
-            resultEventCount++;
-            if (resultEventCount >= 5) {
-                resultEventCount = 0;
-                creditedPerIndex = {};
-                setTimeout(() => { try { rec.stop(); } catch(_){} }, 50);
-            }
-        }
     };
-
     rec.onerror = (e) => {
         if (e.error === 'no-speech') return;
         if (e.error === 'not-allowed') {
             isListening = false; setUI(false);
-            showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON');
+            showError('Microphone permission denied.\\n\\niPhone: Settings $\\rightarrow$ Privacy & Security $\\rightarrow$ Microphone $\\rightarrow$ Safari $\\rightarrow$ ON');
         }
         if (e.error === 'service-not-allowed') {
             isListening = false; setUI(false);
-            showError('Speech blocked.\n\nSettings → Screen Time → Content & Privacy Restrictions → Allowed Apps & Features → Siri → ON\n\nThen reload.');
+            showError('Speech blocked.\\n\\nSettings $\\rightarrow$ Screen Time $\\rightarrow$ Content & Privacy Restrictions $\\rightarrow$ Allowed Apps & Features $\\rightarrow$ Siri $\\rightarrow$ ON\\n\\nThen reload.');
         }
     };
-
     return rec;
 }
 
-// ════════════════════════════════════════════════════════
-// UI HELPERS
-// ════════════════════════════════════════════════════════
 function setUI(on) {
     document.getElementById('dot').classList.toggle('on', on);
     document.getElementById('statusText').textContent = on ? 'सुन रहा हूँ…' : 'रुक गया';
@@ -697,20 +596,15 @@ function setTranscript(html, isInterim) {
 
 let unsavedCount = 0;
 let saveDebounce = null;
-
 function addCount(n) {
     count += n;
     unsavedCount += n;
-
-    // Batch localStorage writes — flush after 3s of no new counts
     clearTimeout(saveDebounce);
     saveDebounce = setTimeout(() => {
         if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
     }, 3000);
-
     const el = document.getElementById('countDisplay');
     el.textContent = count.toLocaleString('en-IN');
-    // Flash without forcing a synchronous reflow
     el.style.transform = 'scale(1.2)';
     el.style.color = '#ffffff';
     setTimeout(() => { el.style.transform = ''; el.style.color = ''; }, 200);
@@ -723,38 +617,17 @@ function showError(msg) {
     b.style.display = 'block';
 }
 
-function showDebug(msg) {
-    const b = document.getElementById('debugBox');
-    if (b) b.textContent = 'Debug: ' + msg;
-}
-
-// ════════════════════════════════════════════════════════
-// CONTROLS
-// ════════════════════════════════════════════════════════
 function startListening() {
     document.getElementById('errorBox').style.display = 'none';
-    iosLangIdx = 0;
-
     recognition = buildRecognition();
     if (!recognition) {
-        showError('Speech recognition not supported here.\n• iPhone: use Safari\n• Desktop: use Google Chrome');
+        showError('Speech recognition not supported here.\\n• iPhone: use Safari\\n• Desktop: use Google Chrome');
         return;
     }
-
     isListening     = true;
     listenStartTime = Date.now();
     if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
-    try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
-
-    // Time-based proactive restart every 6s — keeps iOS engine fresh for slow chanting
-    if (isIOS) {
-        clearInterval(iosRestartTimer);
-        iosRestartTimer = setInterval(() => {
-            if (!isListening || !recognition) return;
-            creditedPerIndex = {};
-            try { recognition.stop(); } catch(_) {}
-        }, 6000);
-    }
+    try { recognition.start(); } catch(e) {}
 }
 
 function stopListening() {
@@ -763,10 +636,7 @@ function stopListening() {
         listenStartTime = null;
     }
     isListening = false;
-    clearInterval(iosRestartTimer); iosRestartTimer = null;
     if (recognition) try { recognition.stop(); } catch(_) {}
-    // Release mic stream on iOS so the green mic indicator disappears
-    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
     if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
     clearTimeout(saveDebounce);
     setUI(false);
@@ -785,8 +655,6 @@ function resetAll() {
     clearInterval(statsTimer);
     statsTimer  = null;
     recognition = null;
-    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-
     document.getElementById('countDisplay').textContent = '0';
     document.getElementById('countOfTarget').textContent = '';
     document.getElementById('targetInput').value = '';
