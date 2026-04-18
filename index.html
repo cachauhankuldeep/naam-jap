@@ -439,8 +439,10 @@ const STORAGE_KEY = 'radha_jap_history';
 // WORD MATCHING
 // ════════════════════════════════════════════════════════
 const PATTERNS = [
-    /राधा/g,                 // Devanagari (primary — hi-IN lang)
-    /\bradha[ae]?\b/gi       // Romanised fallback
+    /राधा/g,               // Devanagari
+    /\bradha[ae]?\b/gi,    // Radha, Radhaa, Radhe
+    /\braha\b/gi,          // iOS en-US hears "Radha" as "Raha"
+    /\brada\b/gi,          // another common iOS mis-transcription
 ];
 
 function countOccurrences(text) {
