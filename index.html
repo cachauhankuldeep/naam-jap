@@ -659,11 +659,14 @@ function buildRecognition() {
 let burstCtx      = null;
 let burstTimer    = null;
 let smoothRMS     = 0;
-let prevAbove     = false;
+let inSpeech      = false;
 let lastCountTime = 0;
 
-const SPEECH_THRESH = 0.003; // RMS above this = speech detected
-const MIN_ONSET_GAP = 280;   // ms — prevents double-count within one word
+// Hysteresis: high threshold to enter speech, low threshold to exit.
+// The gap between them prevents noise jitter from causing false counts.
+const HIGH_THRESH   = 0.012; // RMS must cross this to count a chant
+const LOW_THRESH    = 0.004; // RMS must drop below this before next count
+const MIN_ONSET_GAP = 220;   // ms — min time between counts
 
 function startBurstDetection(stream, actx) {
     burstCtx = actx;
@@ -673,8 +676,7 @@ function startBurstDetection(stream, actx) {
     const analyser = burstCtx.createAnalyser();
     analyser.fftSize = 256;
 
-    // iOS Safari REQUIRES a full graph to destination — without this the analyser
-    // never receives data even though getUserMedia is active
+    // iOS Safari requires the graph to reach destination or analyser gets no data
     const mute = burstCtx.createGain();
     mute.gain.value = 0;
     source.connect(analyser);
@@ -682,7 +684,7 @@ function startBurstDetection(stream, actx) {
     mute.connect(burstCtx.destination);
 
     const buf = new Uint8Array(analyser.frequencyBinCount);
-    smoothRMS = 0; prevAbove = false; lastCountTime = 0;
+    smoothRMS = 0; inSpeech = false; lastCountTime = 0;
 
     burstTimer = setInterval(() => {
         analyser.getByteTimeDomainData(buf);
@@ -692,25 +694,27 @@ function startBurstDetection(stream, actx) {
         const now = Date.now();
 
         const bar = document.getElementById('levelBar');
-        if (bar) bar.style.width = Math.min(100, rms * 800) + '%';
+        if (bar) bar.style.width = Math.min(100, rms * 600) + '%';
 
-        smoothRMS = smoothRMS * 0.6 + rms * 0.4;
-        const above = smoothRMS > SPEECH_THRESH;
+        smoothRMS = smoothRMS * 0.4 + rms * 0.6; // fast-tracking for low lag
 
-        // Rising edge = start of a new chant
-        if (above && !prevAbove && (now - lastCountTime) > MIN_ONSET_GAP) {
-            addCount(1);
-            lastCountTime = now;
-            setTranscript(highlight('राधा'), false);
+        if (!inSpeech && smoothRMS > HIGH_THRESH) {
+            inSpeech = true;
+            if (now - lastCountTime > MIN_ONSET_GAP) {
+                addCount(1);
+                lastCountTime = now;
+                setTranscript(highlight('राधा'), false);
+            }
+        } else if (inSpeech && smoothRMS < LOW_THRESH) {
+            inSpeech = false; // ready for next chant
         }
-        prevAbove = above;
-    }, 20);
+    }, 15);
 }
 
 function stopBurstDetection() {
     clearInterval(burstTimer); burstTimer = null;
     if (burstCtx) { burstCtx.close(); burstCtx = null; }
-    smoothRMS = 0; prevAbove = false;
+    smoothRMS = 0; inSpeech = false;
     const bar = document.getElementById('levelBar');
     if (bar) bar.style.width = '0%';
 }
