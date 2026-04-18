@@ -662,15 +662,25 @@ let smoothRMS     = 0;
 let prevAbove     = false;
 let lastCountTime = 0;
 
-const SPEECH_THRESH  = 0.007; // smoothed RMS above this = speech
-const MIN_ONSET_GAP  = 280;   // ms — prevents double-count within one word
+const SPEECH_THRESH = 0.003; // RMS above this = speech detected
+const MIN_ONSET_GAP = 280;   // ms — prevents double-count within one word
 
 function startBurstDetection(stream, actx) {
     burstCtx = actx;
     burstCtx.resume();
+
+    const source   = burstCtx.createMediaStreamSource(stream);
     const analyser = burstCtx.createAnalyser();
-    analyser.fftSize = 512;
-    burstCtx.createMediaStreamSource(stream).connect(analyser);
+    analyser.fftSize = 256;
+
+    // iOS Safari REQUIRES a full graph to destination — without this the analyser
+    // never receives data even though getUserMedia is active
+    const mute = burstCtx.createGain();
+    mute.gain.value = 0;
+    source.connect(analyser);
+    analyser.connect(mute);
+    mute.connect(burstCtx.destination);
+
     const buf = new Uint8Array(analyser.frequencyBinCount);
     smoothRMS = 0; prevAbove = false; lastCountTime = 0;
 
@@ -682,10 +692,9 @@ function startBurstDetection(stream, actx) {
         const now = Date.now();
 
         const bar = document.getElementById('levelBar');
-        if (bar) bar.style.width = Math.min(100, rms * 700) + '%';
+        if (bar) bar.style.width = Math.min(100, rms * 800) + '%';
 
-        // Smooth to reduce jitter
-        smoothRMS = smoothRMS * 0.75 + rms * 0.25;
+        smoothRMS = smoothRMS * 0.6 + rms * 0.4;
         const above = smoothRMS > SPEECH_THRESH;
 
         // Rising edge = start of a new chant
