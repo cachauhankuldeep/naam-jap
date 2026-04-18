@@ -603,7 +603,7 @@ function buildRecognition() {
     rec.continuous      = !isIOS; // iOS ignores continuous=true
     rec.interimResults  = true;
     rec.maxAlternatives = 1;
-    rec.lang            = isIOS ? 'en-IN' : 'hi-IN';
+    rec.lang            = isIOS ? 'en-US' : 'hi-IN';
 
     rec.onstart = () => setUI(true);
 
