@@ -662,12 +662,13 @@ let burstActive  = false;
 let burstStart   = 0;
 let silenceStart = 0;
 
-const BURST_THRESH = 0.012; // RMS level above this = speaking
-const MIN_BURST_MS = 180;   // Shortest valid chant (ms)
-const MIN_GAP_MS   = 250;   // Silence needed to close a burst
+const BURST_THRESH = 0.006; // RMS level above this = speaking
+const MIN_BURST_MS = 150;   // Shortest valid chant (ms)
+const MIN_GAP_MS   = 100;   // Silence needed to close a burst
 
-function startBurstDetection(stream) {
-    burstCtx = new (window.AudioContext || window.webkitAudioContext)();
+function startBurstDetection(stream, actx) {
+    burstCtx = actx; // AudioContext must be created in user-gesture; passed in
+    burstCtx.resume();
     const analyser = burstCtx.createAnalyser();
     analyser.fftSize = 512;
     burstCtx.createMediaStreamSource(stream).connect(analyser);
@@ -693,7 +694,7 @@ function startBurstDetection(stream) {
                 const dur = silenceStart - burstStart;
                 if (dur >= MIN_BURST_MS) {
                     addCount(1);
-                    setTranscript('🙏 राधा', false);
+                    setTranscript(highlight('राधा'), false);
                 }
                 burstActive = false; silenceStart = 0;
             }
@@ -769,8 +770,11 @@ function startListening() {
 
     if (isIOS) {
         setUI(true);
-        navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-            .then(stream => { micStream = stream; startBurstDetection(stream); })
+        // AudioContext MUST be created synchronously inside the tap handler on iOS Safari
+        const actx = new (window.AudioContext || window.webkitAudioContext)();
+        const audioConstraints = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+        navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false })
+            .then(stream => { micStream = stream; startBurstDetection(stream, actx); })
             .catch(() => {
                 isListening = false; setUI(false);
                 showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON');
