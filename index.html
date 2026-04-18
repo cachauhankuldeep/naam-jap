@@ -689,14 +689,28 @@ function showError(msg) {
 // ════════════════════════════════════════════════════════
 // CONTROLS
 // ════════════════════════════════════════════════════════
-function startListening() {
+async function startListening() {
     document.getElementById('errorBox').style.display = 'none';
+
     if (!recognition) recognition = buildRecognition();
     if (!recognition) {
         showError('Speech recognition not supported here.\n• iPhone: use Safari\n• Desktop: use Google Chrome');
         return;
     }
-    isListening    = true;
+
+    // On iOS, explicitly request mic permission first via getUserMedia.
+    // Without this step, iOS shows the dialog AFTER recognition already fails.
+    if (isIOS) {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            stream.getTracks().forEach(t => t.stop()); // permission granted — release stream
+        } catch (e) {
+            showError('Microphone access denied.\n\nGo to: iPhone Settings → Safari → Microphone → Allow.\nThen reload this page and try again.');
+            return;
+        }
+    }
+
+    isListening     = true;
     listenStartTime = Date.now();
     if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
     try { recognition.start(); } catch(_) {}
