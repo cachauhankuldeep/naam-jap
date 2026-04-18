@@ -656,24 +656,23 @@ function buildRecognition() {
 // Bypasses Siri/speech API — counts each spoken burst directly
 // from microphone volume. Not affected by repetition blindness.
 // ════════════════════════════════════════════════════════
-let burstCtx     = null;
-let burstTimer   = null;
-let burstActive  = false;
-let burstStart   = 0;
-let silenceStart = 0;
+let burstCtx      = null;
+let burstTimer    = null;
+let smoothRMS     = 0;
+let prevAbove     = false;
+let lastCountTime = 0;
 
-const BURST_THRESH = 0.006; // RMS level above this = speaking
-const MIN_BURST_MS = 150;   // Shortest valid chant (ms)
-const MIN_GAP_MS   = 100;   // Silence needed to close a burst
+const SPEECH_THRESH  = 0.007; // smoothed RMS above this = speech
+const MIN_ONSET_GAP  = 280;   // ms — prevents double-count within one word
 
 function startBurstDetection(stream, actx) {
-    burstCtx = actx; // AudioContext must be created in user-gesture; passed in
+    burstCtx = actx;
     burstCtx.resume();
     const analyser = burstCtx.createAnalyser();
     analyser.fftSize = 512;
     burstCtx.createMediaStreamSource(stream).connect(analyser);
     const buf = new Uint8Array(analyser.frequencyBinCount);
-    burstActive = false; burstStart = 0; silenceStart = 0;
+    smoothRMS = 0; prevAbove = false; lastCountTime = 0;
 
     burstTimer = setInterval(() => {
         analyser.getByteTimeDomainData(buf);
@@ -683,29 +682,26 @@ function startBurstDetection(stream, actx) {
         const now = Date.now();
 
         const bar = document.getElementById('levelBar');
-        if (bar) bar.style.width = Math.min(100, rms * 600) + '%';
+        if (bar) bar.style.width = Math.min(100, rms * 700) + '%';
 
-        if (rms > BURST_THRESH) {
-            if (!burstActive) { burstActive = true; burstStart = now; }
-            silenceStart = 0;
-        } else if (burstActive) {
-            if (!silenceStart) silenceStart = now;
-            if (now - silenceStart >= MIN_GAP_MS) {
-                const dur = silenceStart - burstStart;
-                if (dur >= MIN_BURST_MS) {
-                    addCount(1);
-                    setTranscript(highlight('राधा'), false);
-                }
-                burstActive = false; silenceStart = 0;
-            }
+        // Smooth to reduce jitter
+        smoothRMS = smoothRMS * 0.75 + rms * 0.25;
+        const above = smoothRMS > SPEECH_THRESH;
+
+        // Rising edge = start of a new chant
+        if (above && !prevAbove && (now - lastCountTime) > MIN_ONSET_GAP) {
+            addCount(1);
+            lastCountTime = now;
+            setTranscript(highlight('राधा'), false);
         }
+        prevAbove = above;
     }, 20);
 }
 
 function stopBurstDetection() {
     clearInterval(burstTimer); burstTimer = null;
     if (burstCtx) { burstCtx.close(); burstCtx = null; }
-    burstActive = false; silenceStart = 0;
+    smoothRMS = 0; prevAbove = false;
     const bar = document.getElementById('levelBar');
     if (bar) bar.style.width = '0%';
 }
