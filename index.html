@@ -614,7 +614,7 @@ function buildRecognition() {
 
     const rec = new SR();
     rec.continuous      = false;   // false works more reliably across all browsers
-    rec.interimResults  = !isIOS;  // iOS is unreliable with interim results
+    rec.interimResults  = true;    // needed for live simultaneous counting
     rec.maxAlternatives = 1;
     rec.lang            = lang;
 
