@@ -595,15 +595,28 @@ function toggleMonth(mk) {
 // ════════════════════════════════════════════════════════
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
+// Languages to try on iOS — device language first, then common fallbacks
+const IOS_LANGS = [
+    navigator.language,          // whatever the device is set to (e.g. hi-IN, en-IN)
+    navigator.language.split('-')[0], // base language (e.g. 'hi', 'en')
+    'hi-IN', 'hi',
+    'en-IN', 'en-US', 'en-GB', 'en'
+].filter((v, i, a) => v && a.indexOf(v) === i); // deduplicate
+
+let iosLangIdx = 0;
+
 function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return null;
 
+    const lang = isIOS ? IOS_LANGS[iosLangIdx] : 'hi-IN';
+    showDebug('trying lang: ' + lang + ' [' + (iosLangIdx+1) + '/' + IOS_LANGS.length + '] isIOS=' + isIOS);
+
     const rec = new SR();
-    rec.continuous      = !isIOS; // iOS ignores continuous=true
-    rec.interimResults  = true;
+    rec.continuous      = false;   // false works more reliably across all browsers
+    rec.interimResults  = !isIOS;  // iOS is unreliable with interim results
     rec.maxAlternatives = 1;
-    rec.lang            = isIOS ? 'en-US' : 'hi-IN';
+    rec.lang            = lang;
 
     rec.onstart = () => setUI(true);
 
@@ -633,20 +646,40 @@ function buildRecognition() {
     };
 
     rec.onerror = (e) => {
-        // Show the raw error code so we can diagnose
-        showDebug('error: ' + e.error);
-        if (e.error === 'no-speech') return;
-        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-            isListening = false;
-            setUI(false);
-            showError(
-                'Microphone blocked (error: ' + e.error + ')\n\n' +
-                'On iPhone go to:\nSettings → Safari → scroll down →\n' +
-                '"Microphone" → set to Allow.\n\n' +
-                'Then close and reopen the page.'
-            );
+        showDebug('error: ' + e.error + ' | lang: ' + lang);
+
+        if (e.error === 'no-speech') return; // silence is fine, let onend restart
+
+        if (e.error === 'not-allowed') {
+            isListening = false; setUI(false);
+            showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON\n\nThen reload the page.');
+            return;
         }
-        // other errors (network, language) — let onend auto-restart
+
+        if (e.error === 'service-not-allowed') {
+            // This language isn't available on device — try next one automatically
+            iosLangIdx++;
+            if (iosLangIdx < IOS_LANGS.length) {
+                showDebug('service-not-allowed, trying next lang...');
+                recognition = buildRecognition();
+                setTimeout(() => { try { recognition.start(); } catch(_){} }, 300);
+            } else {
+                // All languages exhausted
+                isListening = false; setUI(false);
+                iosLangIdx = 0;
+                showError(
+                    'Speech recognition is blocked on this device.\n\n' +
+                    'Please check ALL of these on your iPhone:\n' +
+                    '1. Settings → Siri & Search → enable Siri\n' +
+                    '2. Settings → General → Keyboard → Enable Dictation\n' +
+                    '3. Settings → Screen Time → OFF (or allow Siri & Dictation)\n' +
+                    '4. No VPN active\n\n' +
+                    'Then reload the page and try again.'
+                );
+            }
+            return;
+        }
+        // network/audio errors — let onend auto-restart
     };
 
     return rec;
@@ -694,20 +727,20 @@ function showDebug(msg) {
 // ════════════════════════════════════════════════════════
 // CONTROLS
 // ════════════════════════════════════════════════════════
-async function startListening() {
+function startListening() {
     document.getElementById('errorBox').style.display = 'none';
+    iosLangIdx = 0; // reset language attempts on each fresh Start
 
-    if (!recognition) recognition = buildRecognition();
+    recognition = buildRecognition(); // always fresh instance
     if (!recognition) {
         showError('Speech recognition not supported here.\n• iPhone: use Safari\n• Desktop: use Google Chrome');
         return;
     }
 
-    showDebug('starting recognition, isIOS=' + isIOS);
     isListening     = true;
     listenStartTime = Date.now();
     if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
-    try { recognition.start(); } catch(_) {}
+    try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
 }
 
 function stopListening() {
