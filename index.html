@@ -605,6 +605,13 @@ function toggleMonth(mk) {
 // SPEECH RECOGNITION
 // ════════════════════════════════════════════════════════
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+let iosRestartTimer = null;
+
+function freshStart() {
+    // Always creates a brand-new SR instance — never reuses stale iOS engine state
+    recognition = buildRecognition();
+    if (recognition) try { recognition.start(); } catch(_) {}
+}
 
 function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -621,7 +628,8 @@ function buildRecognition() {
     rec.onend = () => {
         if (!isListening) { setUI(false); return; }
         creditedPerIndex = {};
-        setTimeout(() => { try { rec.start(); } catch(_){} }, 100);
+        // Create a completely fresh SR instance — not rec.start() — to fully reset iOS engine
+        setTimeout(freshStart, 150);
     };
 
     let resultEventCount = 0;
@@ -645,10 +653,10 @@ function buildRecognition() {
         }
         if (interim) setTranscript(highlight(interim), true);
 
-        // Proactive restart every 8 result events to prevent iOS engine degradation
+        // Count-based proactive restart every 5 result events (backup for fast chanting)
         if (isIOS) {
             resultEventCount++;
-            if (resultEventCount >= 8) {
+            if (resultEventCount >= 5) {
                 resultEventCount = 0;
                 creditedPerIndex = {};
                 setTimeout(() => { try { rec.stop(); } catch(_){} }, 50);
@@ -725,9 +733,9 @@ function showDebug(msg) {
 // ════════════════════════════════════════════════════════
 function startListening() {
     document.getElementById('errorBox').style.display = 'none';
-    iosLangIdx = 0; // reset language attempts on each fresh Start
+    iosLangIdx = 0;
 
-    recognition = buildRecognition(); // always fresh instance
+    recognition = buildRecognition();
     if (!recognition) {
         showError('Speech recognition not supported here.\n• iPhone: use Safari\n• Desktop: use Google Chrome');
         return;
@@ -737,6 +745,16 @@ function startListening() {
     listenStartTime = Date.now();
     if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
     try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
+
+    // Time-based proactive restart every 6s — keeps iOS engine fresh for slow chanting
+    if (isIOS) {
+        clearInterval(iosRestartTimer);
+        iosRestartTimer = setInterval(() => {
+            if (!isListening || !recognition) return;
+            creditedPerIndex = {};
+            try { recognition.stop(); } catch(_) {}
+        }, 6000);
+    }
 }
 
 function stopListening() {
@@ -745,6 +763,7 @@ function stopListening() {
         listenStartTime = null;
     }
     isListening = false;
+    clearInterval(iosRestartTimer); iosRestartTimer = null;
     if (recognition) try { recognition.stop(); } catch(_) {}
     // Release mic stream on iOS so the green mic indicator disappears
     if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
