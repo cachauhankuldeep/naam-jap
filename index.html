@@ -596,34 +596,35 @@ function toggleMonth(mk) {
 // SPEECH RECOGNITION
 // ════════════════════════════════════════════════════════
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+let refreshTimer   = null; // periodic engine restart to prevent iOS degradation
+let transcriptPending = null; // throttle transcript DOM writes
 
-// Languages to try on iOS — device language first, then common fallbacks
-const IOS_LANGS = [
-    navigator.language,          // whatever the device is set to (e.g. hi-IN, en-IN)
-    navigator.language.split('-')[0], // base language (e.g. 'hi', 'en')
-    'hi-IN', 'hi',
-    'en-IN', 'en-US', 'en-GB', 'en'
-].filter((v, i, a) => v && a.indexOf(v) === i); // deduplicate
-
-let iosLangIdx = 0;
+function scheduleRefresh() {
+    clearTimeout(refreshTimer);
+    if (!isListening) return;
+    // Restart every 25s — keeps iOS speech engine fresh and responsive
+    refreshTimer = setTimeout(() => {
+        if (!isListening) return;
+        creditedPerIndex = {}; // clear stale state
+        try { recognition.stop(); } catch(_){} // onend will restart it
+    }, 25000);
+}
 
 function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return null;
 
-    const lang = 'hi-IN'; // Hindi for all platforms
-    showDebug('trying lang: ' + lang + ' [' + (iosLangIdx+1) + '/' + IOS_LANGS.length + '] isIOS=' + isIOS);
-
     const rec = new SR();
     rec.continuous      = true;
     rec.interimResults  = true;
     rec.maxAlternatives = 1;
-    rec.lang            = lang;
+    rec.lang            = 'hi-IN';
 
-    rec.onstart = () => setUI(true);
+    rec.onstart = () => { setUI(true); scheduleRefresh(); };
 
     rec.onend = () => {
         if (!isListening) { setUI(false); return; }
+        creditedPerIndex = {}; // reset on every restart — prevents index drift
         setTimeout(() => { try { rec.start(); } catch(_){} }, 150);
     };
 
@@ -639,52 +640,39 @@ function buildRecognition() {
             creditedPerIndex[i] = found;
             if (res.isFinal) {
                 delete creditedPerIndex[i];
-                setTranscript(highlight(phrase), false);
+                flushTranscript(highlight(phrase), false);
             } else {
                 interim += phrase;
             }
         }
-        if (interim) setTranscript(highlight(interim), true);
+        if (interim) flushTranscript(highlight(interim), true);
     };
 
     rec.onerror = (e) => {
-        showDebug('error: ' + e.error + ' | lang: ' + lang);
-
-        if (e.error === 'no-speech') return; // silence is fine, let onend restart
-
+        if (e.error === 'no-speech') return;
         if (e.error === 'not-allowed') {
             isListening = false; setUI(false);
             showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON\n\nThen reload the page.');
             return;
         }
-
         if (e.error === 'service-not-allowed') {
-            // This language isn't available on device — try next one automatically
-            iosLangIdx++;
-            if (iosLangIdx < IOS_LANGS.length) {
-                showDebug('service-not-allowed, trying next lang...');
-                recognition = buildRecognition();
-                setTimeout(() => { try { recognition.start(); } catch(_){} }, 300);
-            } else {
-                // All languages exhausted
-                isListening = false; setUI(false);
-                iosLangIdx = 0;
-                showError(
-                    'Speech recognition is blocked on this device.\n\n' +
-                    'Please check ALL of these on your iPhone:\n' +
-                    '1. Settings → Siri & Search → enable Siri\n' +
-                    '2. Settings → General → Keyboard → Enable Dictation\n' +
-                    '3. Settings → Screen Time → OFF (or allow Siri & Dictation)\n' +
-                    '4. No VPN active\n\n' +
-                    'Then reload the page and try again.'
-                );
-            }
-            return;
+            isListening = false; setUI(false);
+            showError('Speech recognition blocked.\n\nSettings → Screen Time → Content & Privacy Restrictions → Allowed Apps & Features → Siri → ON\n\nThen reload the page.');
         }
-        // network/audio errors — let onend auto-restart
+        // other errors: let onend auto-restart
     };
 
     return rec;
+}
+
+// Throttle transcript DOM updates to max once per 250ms — eliminates render lag
+function flushTranscript(html, isInterim) {
+    if (transcriptPending) return; // already scheduled
+    transcriptPending = setTimeout(() => {
+        transcriptPending = null;
+        const box = document.getElementById('transcript');
+        box.innerHTML = isInterim ? `<span class="interim">${html}</span>` : html;
+    }, 250);
 }
 
 // ════════════════════════════════════════════════════════
@@ -754,6 +742,8 @@ function stopListening() {
     if (recognition) try { recognition.stop(); } catch(_) {}
     // Release mic stream on iOS so the green mic indicator disappears
     if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    clearTimeout(refreshTimer); refreshTimer = null;
+    clearTimeout(transcriptPending); transcriptPending = null;
     setUI(false);
     updateStats();
     if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
