@@ -438,13 +438,20 @@ const STORAGE_KEY = 'radha_jap_history';
 // ════════════════════════════════════════════════════════
 // WORD MATCHING
 // ════════════════════════════════════════════════════════
+// Every way a speech engine can transcribe Radha / Radhe
 const PATTERNS = [
-    /राधा/g,               // Radha — standard
-    /राधे/g,               // Radhe — vocative, iOS returns this for slow chanting
-    /रहा/g,                // iOS hi-IN returns this for fast chanting of Radha
-    /\bradha[ae]?\b/gi,    // Roman: Radha, Radhaa, Radhe
-    /\braha\b/gi,          // Roman: en-US mis-transcription
-    /\brada\b/gi,
+    // Devanagari
+    /राधा/g,
+    /राधे/g,
+    /राधी/g,
+    /रधा/g,
+    /रहा/g,
+    /रहे/g,
+    // Roman
+    /\b(?:radha|radhaa|radhae|radhe|radhi|radhai|radhey|radho)\b/gi,
+    /\b(?:rada|raada|rade|radi|rado)\b/gi,
+    /\b(?:raha|rahaa|rahe|rahi|raho|rahay)\b/gi,
+    /\b(?:ratha|rathe|rathi|ratho)\b/gi,
 ];
 
 function countOccurrences(text) {
