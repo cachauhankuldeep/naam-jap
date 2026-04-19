@@ -623,7 +623,7 @@ function buildRecognition() {
         creditedPerIndex = {};
         // Reuse the SAME instance — rebuilding creates new Chrome sessions
         // which causes permission re-asks and hits the ~1500-count session limit
-        setTimeout(() => { try { rec.start(); } catch(_) {} }, 150);
+        setTimeout(() => { try { rec.start(); } catch(_) {} }, 50);
     };
     rec.onresult = (event) => {
         let interim = '';
@@ -657,15 +657,15 @@ function buildRecognition() {
 // ════════════════════════════════════════════════════════
 let burstCtx      = null;
 let burstTimer    = null;
-let smoothRMS     = 0;
-let inSpeech      = false;
-let lastCountTime = 0;
+let smoothRMS      = 0;
+let inSpeech       = false;
+let speechEntryTime = 0;
+let lastCountTime  = 0;
 
-// Hysteresis: high threshold to enter speech, low threshold to exit.
-// The gap between them prevents noise jitter from causing false counts.
-const HIGH_THRESH   = 0.008; // RMS must cross this to count a chant
-const LOW_THRESH    = 0.003; // RMS must drop below this before next count
-const MIN_ONSET_GAP = 220;   // ms — min time between counts
+const HIGH_THRESH   = 0.005; // enter speech state
+const LOW_THRESH    = 0.002; // exit on silence
+const MAX_SPEECH_MS = 500;   // force-exit after 500ms — handles continuous chanting with no gaps
+const MIN_ONSET_GAP = 200;   // min ms between counts
 
 function startBurstDetection(stream, actx) {
     burstCtx = actx;
@@ -683,7 +683,7 @@ function startBurstDetection(stream, actx) {
     mute.connect(burstCtx.destination);
 
     const buf = new Uint8Array(analyser.frequencyBinCount);
-    smoothRMS = 0; inSpeech = false; lastCountTime = 0;
+    smoothRMS = 0; inSpeech = false; speechEntryTime = 0; lastCountTime = 0;
 
     burstTimer = setInterval(() => {
         analyser.getByteTimeDomainData(buf);
@@ -693,19 +693,22 @@ function startBurstDetection(stream, actx) {
         const now = Date.now();
 
         const bar = document.getElementById('levelBar');
-        if (bar) bar.style.width = Math.min(100, rms * 600) + '%';
+        if (bar) bar.style.width = Math.min(100, rms * 800) + '%';
 
-        smoothRMS = smoothRMS * 0.4 + rms * 0.6; // fast-tracking for low lag
+        smoothRMS = smoothRMS * 0.4 + rms * 0.6;
 
-        if (!inSpeech && smoothRMS > HIGH_THRESH) {
+        if (!inSpeech && smoothRMS > HIGH_THRESH && (now - lastCountTime) > MIN_ONSET_GAP) {
             inSpeech = true;
-            if (now - lastCountTime > MIN_ONSET_GAP) {
-                addCount(1);
-                lastCountTime = now;
-                setTranscript(highlight('राधा'), false);
+            speechEntryTime = now;
+            addCount(1);
+            lastCountTime = now;
+            setTranscript(highlight('राधा'), false);
+        } else if (inSpeech) {
+            // Exit on silence OR after MAX_SPEECH_MS — whichever comes first
+            // MAX_SPEECH_MS handles continuous chanting where there's no silence gap
+            if (smoothRMS < LOW_THRESH || (now - speechEntryTime) > MAX_SPEECH_MS) {
+                inSpeech = false;
             }
-        } else if (inSpeech && smoothRMS < LOW_THRESH) {
-            inSpeech = false; // ready for next chant
         }
     }, 15);
 }
