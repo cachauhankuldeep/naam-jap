@@ -434,7 +434,9 @@ let totalElapsed     = 0;
 let listenStartTime  = null;
 let creditedPerIndex = {};
 let targetReached    = false;
-let micStream        = null; // kept alive on iOS to avoid repeated permission dialogs
+let micStream        = null; // kept alive to avoid repeated mic permission dialogs
+let srCycleCount     = 0;   // recognitions in current SR instance (for proactive reset)
+let srDoReset        = false; // flag: rebuild SR instance on next onend
 
 const STORAGE_KEY = 'radha_jap_history';
 
@@ -605,12 +607,20 @@ function toggleMonth(mk) {
 }
 
 // ════════════════════════════════════════════════════════
-// SPEECH RECOGNITION — Mac / desktop only
+// PLATFORM DETECTION
+// hasSR  — browser has Web Speech API (desktop Chrome, iOS Safari, Android Chrome)
+// isMobile — phone/tablet (needs proactive SR reset to beat repetition blindness)
+// No hasSR → Chrome on iOS (CriOS) → must use burst detection
 // ════════════════════════════════════════════════════════
-// Use burst detection on ALL mobile (iOS + Android) — speech APIs have
-// repetition blindness for mantras on both platforms
-const isIOS = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent) && !window.MSStream;
+const hasSR    = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+const isMobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent) && !window.MSStream;
 
+// ════════════════════════════════════════════════════════
+// SPEECH RECOGNITION
+// Desktop: reuse same instance (avoids Chrome session limit)
+// Mobile:  rebuild every 7 counts — resets iOS engine memory before
+//          repetition blindness kicks in (~8-10 repeats of same word)
+// ════════════════════════════════════════════════════════
 function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return null;
@@ -619,14 +629,21 @@ function buildRecognition() {
     rec.interimResults  = true;
     rec.maxAlternatives = 1;
     rec.lang            = 'hi-IN';
+
     rec.onstart = () => setUI(true);
+
     rec.onend = () => {
         if (!isListening) { setUI(false); return; }
         creditedPerIndex = {};
-        // Reuse the SAME instance — rebuilding creates new Chrome sessions
-        // which causes permission re-asks and hits the ~1500-count session limit
-        setTimeout(() => { try { rec.start(); } catch(_) {} }, 50);
+        if (srDoReset) {
+            srDoReset = false;
+            recognition = buildRecognition();
+            setTimeout(() => { if (recognition) try { recognition.start(); } catch(_) {} }, 80);
+        } else {
+            setTimeout(() => { try { rec.start(); } catch(_) {} }, 50);
+        }
     };
+
     rec.onresult = (event) => {
         let interim = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -635,7 +652,17 @@ function buildRecognition() {
             const found  = countOccurrences(phrase);
             const prev   = creditedPerIndex[i] || 0;
             const delta  = found - prev;
-            if (delta > 0) addCount(delta);
+            if (delta > 0) {
+                addCount(delta);
+                if (isMobile) {
+                    srCycleCount += delta;
+                    if (srCycleCount >= 7 && !srDoReset) {
+                        srCycleCount = 0;
+                        srDoReset = true;
+                        setTimeout(() => { try { rec.stop(); } catch(_) {} }, 0);
+                    }
+                }
+            }
             creditedPerIndex[i] = found;
             if (res.isFinal) {
                 delete creditedPerIndex[i];
@@ -644,12 +671,11 @@ function buildRecognition() {
         }
         if (interim) setTranscript(highlight(interim), true);
     };
+
     rec.onerror = (e) => {
         if (e.error === 'no-speech') return;
         if (e.error === 'not-allowed') {
             if (isListening) {
-                // Chrome's internal SR session expired — site permission is still valid,
-                // so rebuilding + restarting silently avoids the permission dialog
                 recognition = buildRecognition();
                 setTimeout(() => { if (recognition) try { recognition.start(); } catch(_) {} }, 200);
                 return;
@@ -657,7 +683,10 @@ function buildRecognition() {
             isListening = false; setUI(false);
             showError('Microphone permission denied. Please allow microphone access and try again.');
         }
-        if (e.error === 'service-not-allowed') { isListening = false; setUI(false); showError('Speech blocked.\n\nSettings → Screen Time → Content & Privacy Restrictions → Allowed Apps & Features → Siri → ON\n\nThen reload.'); }
+        if (e.error === 'service-not-allowed') {
+            isListening = false; setUI(false);
+            showError('Speech blocked.\n\nSettings → Screen Time → Content & Privacy Restrictions → Allowed Apps & Features → Siri → ON\n\nThen reload.');
+        }
     };
     return rec;
 }
@@ -829,28 +858,13 @@ function startListening() {
     listenStartTime = Date.now();
     if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
 
-    if (isIOS) {
-        setUI(true);
-        const actx = new (window.AudioContext || window.webkitAudioContext)();
-        const startDetection = (stream) => { micStream = stream; startBurstDetection(stream, actx); };
-        if (micStream && micStream.active) {
-            // Reuse existing stream — avoids repeated permission dialog on iOS
-            startDetection(micStream);
-        } else {
-            const audioConstraints = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
-            navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false })
-                .then(startDetection)
-                .catch(() => {
-                    isListening = false; setUI(false);
-                    showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON');
-                });
-        }
-    } else {
-        // Hold a getUserMedia stream to prevent Chrome from re-prompting mic permission
-        // when the Speech API internally renews its session (happens around every 1500-2500 counts)
+    if (hasSR) {
+        // Speech recognition — desktop Chrome + iOS Safari + Android Chrome
+        // getUserMedia stream is held alive to prevent mic permission re-ask on session renewals
         const startSR = () => {
+            srCycleCount = 0;
             if (!recognition) recognition = buildRecognition();
-            if (!recognition) { isListening = false; showError('Speech recognition not supported.\n• Desktop: use Google Chrome'); return; }
+            if (!recognition) { isListening = false; showError('Speech recognition not supported. Use Google Chrome on desktop.'); return; }
             try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
         };
         if (micStream && micStream.active) {
@@ -859,6 +873,25 @@ function startListening() {
             navigator.mediaDevices.getUserMedia({ audio: true, video: false })
                 .then(stream => { micStream = stream; startSR(); })
                 .catch(() => startSR());
+        }
+    } else {
+        // Burst detection — Chrome on iOS (CriOS has no Web Speech API)
+        // AudioContext MUST be created AND resumed synchronously inside the tap handler.
+        // CriOS will not resume it from inside a Promise .then() callback.
+        setUI(true);
+        const actx = new (window.AudioContext || window.webkitAudioContext)();
+        actx.resume();
+        const startDetection = (stream) => { micStream = stream; startBurstDetection(stream, actx); };
+        if (micStream && micStream.active) {
+            startDetection(micStream);
+        } else {
+            const constraints = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false };
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(startDetection)
+                .catch(() => {
+                    isListening = false; setUI(false);
+                    showError('Microphone access denied. Allow mic in browser settings and try again.');
+                });
         }
     }
 }
@@ -869,7 +902,7 @@ function stopListening() {
         listenStartTime = null;
     }
     isListening = false;
-    if (isIOS) stopBurstDetection();
+    if (!hasSR) stopBurstDetection();
     else if (recognition) try { recognition.stop(); } catch(_) {}
     // iOS: keep micStream alive — releasing it triggers a new permission dialog next time
     if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
@@ -888,8 +921,10 @@ function resetAll() {
     listenStartTime  = null;
     creditedPerIndex = {};
     clearInterval(statsTimer);
-    statsTimer  = null;
-    recognition = null;
+    statsTimer   = null;
+    recognition  = null;
+    srCycleCount = 0;
+    srDoReset    = false;
     if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
 
     document.getElementById('countDisplay').textContent = '0';
