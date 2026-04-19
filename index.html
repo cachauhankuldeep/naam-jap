@@ -621,10 +621,9 @@ function buildRecognition() {
     rec.onend = () => {
         if (!isListening) { setUI(false); return; }
         creditedPerIndex = {};
-        setTimeout(() => {
-            recognition = buildRecognition();
-            if (recognition) try { recognition.start(); } catch(_) {}
-        }, 150);
+        // Reuse the SAME instance — rebuilding creates new Chrome sessions
+        // which causes permission re-asks and hits the ~1500-count session limit
+        setTimeout(() => { try { rec.start(); } catch(_) {} }, 150);
     };
     rec.onresult = (event) => {
         let interim = '';
@@ -664,8 +663,8 @@ let lastCountTime = 0;
 
 // Hysteresis: high threshold to enter speech, low threshold to exit.
 // The gap between them prevents noise jitter from causing false counts.
-const HIGH_THRESH   = 0.012; // RMS must cross this to count a chant
-const LOW_THRESH    = 0.004; // RMS must drop below this before next count
+const HIGH_THRESH   = 0.008; // RMS must cross this to count a chant
+const LOW_THRESH    = 0.003; // RMS must drop below this before next count
 const MIN_ONSET_GAP = 220;   // ms — min time between counts
 
 function startBurstDetection(stream, actx) {
@@ -779,17 +778,22 @@ function startListening() {
 
     if (isIOS) {
         setUI(true);
-        // AudioContext MUST be created synchronously inside the tap handler on iOS Safari
         const actx = new (window.AudioContext || window.webkitAudioContext)();
-        const audioConstraints = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
-        navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false })
-            .then(stream => { micStream = stream; startBurstDetection(stream, actx); })
-            .catch(() => {
-                isListening = false; setUI(false);
-                showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON');
-            });
+        const startDetection = (stream) => { micStream = stream; startBurstDetection(stream, actx); };
+        if (micStream && micStream.active) {
+            // Reuse existing stream — avoids repeated permission dialog on iOS
+            startDetection(micStream);
+        } else {
+            const audioConstraints = { echoCancellation: false, noiseSuppression: false, autoGainControl: false };
+            navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false })
+                .then(startDetection)
+                .catch(() => {
+                    isListening = false; setUI(false);
+                    showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON');
+                });
+        }
     } else {
-        recognition = buildRecognition();
+        if (!recognition) recognition = buildRecognition();
         if (!recognition) { isListening = false; showError('Speech recognition not supported.\n• Desktop: use Google Chrome'); return; }
         try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
     }
@@ -802,8 +806,8 @@ function stopListening() {
     }
     isListening = false;
     if (isIOS) stopBurstDetection();
-    if (recognition) try { recognition.stop(); } catch(_) {}
-    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    else if (recognition) try { recognition.stop(); } catch(_) {}
+    // iOS: keep micStream alive — releasing it triggers a new permission dialog next time
     if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
     clearTimeout(saveDebounce);
     setUI(false);
