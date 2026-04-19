@@ -858,41 +858,24 @@ function startListening() {
     listenStartTime = Date.now();
     if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
 
-    if (hasSR) {
-        // Speech recognition — desktop Chrome + iOS Safari + Android Chrome
-        // getUserMedia stream is held alive to prevent mic permission re-ask on session renewals
-        const startSR = () => {
-            srCycleCount = 0;
-            if (!recognition) recognition = buildRecognition();
-            if (!recognition) { isListening = false; showError('Speech recognition not supported. Use Google Chrome on desktop.'); return; }
-            try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
-        };
-        if (micStream && micStream.active) {
-            startSR();
-        } else {
-            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                .then(stream => { micStream = stream; startSR(); })
-                .catch(() => startSR());
-        }
+    // Web Audio burst detection on ALL platforms — single getUserMedia permission,
+    // never asks again. Speech Recognition API dropped because Chrome renews its
+    // internal OS-level mic session at ~2250 counts and triggers a permission dialog
+    // that cannot be suppressed from JS.
+    setUI(true);
+    const actx = new (window.AudioContext || window.webkitAudioContext)();
+    actx.resume(); // synchronous unlock — required by iOS/CriOS in user gesture
+    const startDetection = (stream) => { micStream = stream; startBurstDetection(stream, actx); };
+    if (micStream && micStream.active) {
+        startDetection(micStream);
     } else {
-        // Burst detection — Chrome on iOS (CriOS has no Web Speech API)
-        // AudioContext MUST be created AND resumed synchronously inside the tap handler.
-        // CriOS will not resume it from inside a Promise .then() callback.
-        setUI(true);
-        const actx = new (window.AudioContext || window.webkitAudioContext)();
-        actx.resume();
-        const startDetection = (stream) => { micStream = stream; startBurstDetection(stream, actx); };
-        if (micStream && micStream.active) {
-            startDetection(micStream);
-        } else {
-            const constraints = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false };
-            navigator.mediaDevices.getUserMedia(constraints)
-                .then(startDetection)
-                .catch(() => {
-                    isListening = false; setUI(false);
-                    showError('Microphone access denied. Allow mic in browser settings and try again.');
-                });
-        }
+        const constraints = { audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, video: false };
+        navigator.mediaDevices.getUserMedia(constraints)
+            .then(startDetection)
+            .catch(() => {
+                isListening = false; setUI(false);
+                showError('Microphone access denied. Please allow microphone access and try again.');
+            });
     }
 }
 
@@ -902,8 +885,7 @@ function stopListening() {
         listenStartTime = null;
     }
     isListening = false;
-    if (!hasSR) stopBurstDetection();
-    else if (recognition) try { recognition.stop(); } catch(_) {}
+    stopBurstDetection();
     // iOS: keep micStream alive — releasing it triggers a new permission dialog next time
     if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
     clearTimeout(saveDebounce);
