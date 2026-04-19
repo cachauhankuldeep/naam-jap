@@ -796,9 +796,20 @@ function startListening() {
                 });
         }
     } else {
-        if (!recognition) recognition = buildRecognition();
-        if (!recognition) { isListening = false; showError('Speech recognition not supported.\n• Desktop: use Google Chrome'); return; }
-        try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
+        // Hold a getUserMedia stream to prevent Chrome from re-prompting mic permission
+        // when the Speech API internally renews its session (happens around every 1500-2500 counts)
+        const startSR = () => {
+            if (!recognition) recognition = buildRecognition();
+            if (!recognition) { isListening = false; showError('Speech recognition not supported.\n• Desktop: use Google Chrome'); return; }
+            try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
+        };
+        if (micStream && micStream.active) {
+            startSR();
+        } else {
+            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
+                .then(stream => { micStream = stream; startSR(); })
+                .catch(() => startSR());
+        }
     }
 }
 
