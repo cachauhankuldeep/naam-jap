@@ -607,7 +607,9 @@ function toggleMonth(mk) {
 // ════════════════════════════════════════════════════════
 // SPEECH RECOGNITION — Mac / desktop only
 // ════════════════════════════════════════════════════════
-const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+// Use burst detection on ALL mobile (iOS + Android) — speech APIs have
+// repetition blindness for mantras on both platforms
+const isIOS = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent) && !window.MSStream;
 
 function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -651,21 +653,23 @@ function buildRecognition() {
 }
 
 // ════════════════════════════════════════════════════════
-// iOS AUDIO BURST DETECTION
-// Bypasses Siri/speech API — counts each spoken burst directly
-// from microphone volume. Not affected by repetition blindness.
+// MOBILE AUDIO BURST DETECTION
+// Bypasses speech APIs (repetition blindness on all platforms).
+// Auto-calibrates thresholds to the user's mic + room on each Start.
+// Uses requestAnimationFrame — more reliable than setInterval on mobile.
 // ════════════════════════════════════════════════════════
-let burstCtx      = null;
-let burstTimer    = null;
-let smoothRMS      = 0;
-let inSpeech       = false;
+let burstCtx        = null;
+let burstTimer      = null;
+let smoothRMS       = 0;
+let inSpeech        = false;
 let speechEntryTime = 0;
-let lastCountTime  = 0;
+let lastCountTime   = 0;
+let dynHigh         = 0.006; // set dynamically during calibration
+let dynLow          = 0.002;
 
-const HIGH_THRESH   = 0.005; // enter speech state
-const LOW_THRESH    = 0.002; // exit on silence
-const MAX_SPEECH_MS = 500;   // force-exit after 500ms — handles continuous chanting with no gaps
-const MIN_ONSET_GAP = 200;   // min ms between counts
+const MAX_SPEECH_MS = 450;  // force-exit after 450ms — handles continuous chanting
+const MIN_ONSET_GAP = 180;  // min ms between counts
+const CALIB_MS      = 1500; // calibration window
 
 function startBurstDetection(stream, actx) {
     burstCtx = actx;
@@ -685,7 +689,19 @@ function startBurstDetection(stream, actx) {
     const buf = new Uint8Array(analyser.frequencyBinCount);
     smoothRMS = 0; inSpeech = false; speechEntryTime = 0; lastCountTime = 0;
 
-    burstTimer = setInterval(() => {
+    // Calibration phase: measure ambient noise floor for CALIB_MS ms,
+    // then set thresholds well above it so only speech triggers a count
+    let calibrating   = true;
+    let calibSamples  = [];
+    const calibStart  = Date.now();
+    document.getElementById('statusText').textContent = 'Calibrating mic…';
+
+    function tick() {
+        if (!burstCtx) return; // stopped externally
+
+        // Resume if iOS suspended the context mid-session
+        if (burstCtx.state === 'suspended') burstCtx.resume();
+
         analyser.getByteTimeDomainData(buf);
         let sum = 0;
         for (let i = 0; i < buf.length; i++) { const v = (buf[i] - 128) / 128; sum += v * v; }
@@ -693,28 +709,44 @@ function startBurstDetection(stream, actx) {
         const now = Date.now();
 
         const bar = document.getElementById('levelBar');
-        if (bar) bar.style.width = Math.min(100, rms * 800) + '%';
+        if (bar) bar.style.width = Math.min(100, rms * 600) + '%';
 
-        smoothRMS = smoothRMS * 0.4 + rms * 0.6;
+        if (calibrating) {
+            calibSamples.push(rms);
+            if (now - calibStart >= CALIB_MS) {
+                calibrating = false;
+                const avg = calibSamples.reduce((a, b) => a + b, 0) / calibSamples.length;
+                // High threshold: 5× above noise floor, clamped between 0.004 and 0.018
+                dynHigh = Math.max(0.004, Math.min(0.018, avg * 5 + 0.002));
+                dynLow  = dynHigh * 0.4;
+                document.getElementById('statusText').textContent = 'सुन रहा हूँ…';
+            }
+            burstTimer = requestAnimationFrame(tick);
+            return;
+        }
 
-        if (!inSpeech && smoothRMS > HIGH_THRESH && (now - lastCountTime) > MIN_ONSET_GAP) {
-            inSpeech = true;
+        smoothRMS = smoothRMS * 0.35 + rms * 0.65;
+
+        if (!inSpeech && smoothRMS > dynHigh && (now - lastCountTime) > MIN_ONSET_GAP) {
+            inSpeech        = true;
             speechEntryTime = now;
             addCount(1);
             lastCountTime = now;
             setTranscript(highlight('राधा'), false);
         } else if (inSpeech) {
-            // Exit on silence OR after MAX_SPEECH_MS — whichever comes first
-            // MAX_SPEECH_MS handles continuous chanting where there's no silence gap
-            if (smoothRMS < LOW_THRESH || (now - speechEntryTime) > MAX_SPEECH_MS) {
+            if (smoothRMS < dynLow || (now - speechEntryTime) > MAX_SPEECH_MS) {
                 inSpeech = false;
             }
         }
-    }, 15);
+
+        burstTimer = requestAnimationFrame(tick);
+    }
+
+    burstTimer = requestAnimationFrame(tick);
 }
 
 function stopBurstDetection() {
-    clearInterval(burstTimer); burstTimer = null;
+    if (burstTimer) { cancelAnimationFrame(burstTimer); burstTimer = null; }
     if (burstCtx) { burstCtx.close(); burstCtx = null; }
     smoothRMS = 0; inSpeech = false;
     const bar = document.getElementById('levelBar');
