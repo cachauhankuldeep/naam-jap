@@ -646,7 +646,17 @@ function buildRecognition() {
     };
     rec.onerror = (e) => {
         if (e.error === 'no-speech') return;
-        if (e.error === 'not-allowed') { isListening = false; setUI(false); showError('Microphone permission denied.\n\niPhone: Settings → Privacy & Security → Microphone → Safari → ON'); }
+        if (e.error === 'not-allowed') {
+            if (isListening) {
+                // Chrome's internal SR session expired — site permission is still valid,
+                // so rebuilding + restarting silently avoids the permission dialog
+                recognition = buildRecognition();
+                setTimeout(() => { if (recognition) try { recognition.start(); } catch(_) {} }, 200);
+                return;
+            }
+            isListening = false; setUI(false);
+            showError('Microphone permission denied. Please allow microphone access and try again.');
+        }
         if (e.error === 'service-not-allowed') { isListening = false; setUI(false); showError('Speech blocked.\n\nSettings → Screen Time → Content & Privacy Restrictions → Allowed Apps & Features → Siri → ON\n\nThen reload.'); }
     };
     return rec;
@@ -667,8 +677,8 @@ let lastCountTime   = 0;
 let dynHigh         = 0.006; // set dynamically during calibration
 let dynLow          = 0.002;
 
-const MAX_SPEECH_MS = 450;  // force-exit after 450ms — handles continuous chanting
-const MIN_ONSET_GAP = 180;  // min ms between counts
+const MAX_SPEECH_MS = 300;  // force-exit after 300ms — handles fast continuous chanting
+const MIN_ONSET_GAP = 150;  // min ms between counts
 const CALIB_MS      = 1500; // calibration window
 
 function startBurstDetection(stream, actx) {
@@ -711,14 +721,22 @@ function startBurstDetection(stream, actx) {
         const bar = document.getElementById('levelBar');
         if (bar) bar.style.width = Math.min(100, rms * 600) + '%';
 
+        // Wait for AudioContext to be running — Chrome on iOS can take a few frames
+        if (burstCtx.state !== 'running') {
+            burstCtx.resume();
+            burstTimer = requestAnimationFrame(tick);
+            return;
+        }
+
         if (calibrating) {
             calibSamples.push(rms);
             if (now - calibStart >= CALIB_MS) {
                 calibrating = false;
                 const avg = calibSamples.reduce((a, b) => a + b, 0) / calibSamples.length;
-                // High threshold: 5× above noise floor, clamped between 0.004 and 0.018
-                dynHigh = Math.max(0.004, Math.min(0.018, avg * 5 + 0.002));
-                dynLow  = dynHigh * 0.4;
+                // High threshold: 3× above noise floor, clamped between 0.003 and 0.015
+                // Lower multiplier = more sensitive, catches quieter voices
+                dynHigh = Math.max(0.003, Math.min(0.015, avg * 3 + 0.002));
+                dynLow  = dynHigh * 0.35;
                 document.getElementById('statusText').textContent = 'सुन रहा हूँ…';
             }
             burstTimer = requestAnimationFrame(tick);
