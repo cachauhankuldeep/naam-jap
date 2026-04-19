@@ -860,20 +860,10 @@ function startListening() {
 
     if (hasSR) {
         // Speech recognition — desktop Chrome + iOS Safari + Android Chrome
-        // getUserMedia stream is held alive to prevent mic permission re-ask on session renewals
-        const startSR = () => {
-            srCycleCount = 0;
-            if (!recognition) recognition = buildRecognition();
-            if (!recognition) { isListening = false; showError('Speech recognition not supported. Use Google Chrome on desktop.'); return; }
-            try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
-        };
-        if (micStream && micStream.active) {
-            startSR();
-        } else {
-            navigator.mediaDevices.getUserMedia({ audio: true, video: false })
-                .then(stream => { micStream = stream; startSR(); })
-                .catch(() => startSR());
-        }
+        srCycleCount = 0;
+        if (!recognition) recognition = buildRecognition();
+        if (!recognition) { isListening = false; showError('Speech recognition not supported. Use Google Chrome on desktop.'); return; }
+        try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
     } else {
         // Burst detection — Chrome on iOS (CriOS has no Web Speech API)
         // AudioContext MUST be created AND resumed synchronously inside the tap handler.
