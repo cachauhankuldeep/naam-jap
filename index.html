@@ -434,7 +434,8 @@ let totalElapsed     = 0;
 let listenStartTime  = null;
 let creditedPerIndex = {};
 let targetReached    = false;
-let micStream        = null; // kept alive to avoid repeated mic permission dialogs
+let micStream        = null;
+let permPending      = false; // true while Chrome's mic permission bar is showing
 let srCycleCount     = 0;   // recognitions in current SR instance (for proactive reset)
 let srDoReset        = false; // flag: rebuild SR instance on next onend
 
@@ -630,12 +631,19 @@ function buildRecognition() {
     rec.maxAlternatives = 1;
     rec.lang            = 'hi-IN';
 
-    rec.onstart = () => setUI(true);
+    rec.onstart = () => {
+        permPending = false;
+        setUI(true);
+    };
 
     rec.onend = () => {
         if (!isListening) { setUI(false); return; }
         creditedPerIndex = {};
-        if (srDoReset) {
+        if (permPending) {
+            // Chrome's permission bar is showing — keep trying the same instance.
+            // Once user clicks Allow, rec.start() will succeed and onstart clears permPending.
+            setTimeout(() => { try { rec.start(); } catch(_) {} }, 600);
+        } else if (srDoReset) {
             srDoReset = false;
             recognition = buildRecognition();
             setTimeout(() => { if (recognition) try { recognition.start(); } catch(_) {} }, 80);
@@ -676,8 +684,15 @@ function buildRecognition() {
         if (e.error === 'no-speech') return;
         if (e.error === 'not-allowed') {
             if (isListening) {
-                recognition = buildRecognition();
-                setTimeout(() => { if (recognition) try { recognition.start(); } catch(_) {} }, 200);
+                if (!permPending) {
+                    permPending = true;
+                    // Stay in listening state — do NOT stop the app.
+                    // onend will keep retrying rec.start() every 600ms.
+                    // Once user clicks Allow in Chrome's bar, onstart fires and counting resumes.
+                    document.getElementById('statusText').textContent = '⚠️ Click Allow in browser bar ↑';
+                    document.getElementById('dot').style.background = '#f59e0b';
+                    document.getElementById('dot').style.boxShadow = '0 0 10px #f59e0b';
+                }
                 return;
             }
             isListening = false; setUI(false);
@@ -892,6 +907,7 @@ function stopListening() {
         listenStartTime = null;
     }
     isListening = false;
+    permPending = false;
     if (!hasSR) stopBurstDetection();
     else if (recognition) try { recognition.stop(); } catch(_) {}
     // iOS: keep micStream alive — releasing it triggers a new permission dialog next time
