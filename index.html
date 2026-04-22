@@ -436,6 +436,7 @@ let creditedPerIndex = {};
 let targetReached    = false;
 let micStream        = null;
 let permPending      = false; // true while Chrome's mic permission bar is showing
+let permRetryInterval = null; // independent interval that retries rec.start() during permission re-ask
 let srCycleCount     = 0;   // recognitions in current SR instance (for proactive reset)
 let srDoReset        = false; // flag: rebuild SR instance on next onend
 
@@ -633,6 +634,11 @@ function buildRecognition() {
 
     rec.onstart = () => {
         permPending = false;
+        if (permRetryInterval) { clearInterval(permRetryInterval); permRetryInterval = null; }
+        // Clear inline amber styles so the CSS green 'on' class takes effect
+        const dot = document.getElementById('dot');
+        dot.style.background = '';
+        dot.style.boxShadow = '';
         setUI(true);
     };
 
@@ -640,9 +646,8 @@ function buildRecognition() {
         if (!isListening) { setUI(false); return; }
         creditedPerIndex = {};
         if (permPending) {
-            // Chrome's permission bar is showing — keep trying the same instance.
-            // Once user clicks Allow, rec.start() will succeed and onstart clears permPending.
-            setTimeout(() => { try { rec.start(); } catch(_) {} }, 600);
+            // permRetryInterval already handles restart — don't add a competing timeout here.
+            return;
         } else if (srDoReset) {
             srDoReset = false;
             recognition = buildRecognition();
@@ -681,27 +686,32 @@ function buildRecognition() {
     };
 
     rec.onerror = (e) => {
-        if (e.error === 'no-speech') return;
-        if (e.error === 'not-allowed') {
+        if (e.error === 'no-speech' || e.error === 'aborted') return;
+        // Both 'not-allowed' and 'service-not-allowed' can mean Chrome's session-level
+        // permission re-ask (the amber bar). Treat both as recoverable while listening.
+        if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
             if (isListening) {
                 if (!permPending) {
                     permPending = true;
-                    // Stay in listening state — do NOT stop the app.
-                    // onend will keep retrying rec.start() every 600ms.
-                    // Once user clicks Allow in Chrome's bar, onstart fires and counting resumes.
                     document.getElementById('statusText').textContent = '⚠️ Click Allow in browser bar ↑';
                     document.getElementById('dot').style.background = '#f59e0b';
                     document.getElementById('dot').style.boxShadow = '0 0 10px #f59e0b';
+                    // Independent interval so the retry loop never stops even if rec.start() throws.
+                    permRetryInterval = setInterval(() => {
+                        if (!permPending || !isListening) {
+                            clearInterval(permRetryInterval); permRetryInterval = null; return;
+                        }
+                        try { rec.start(); } catch (_) {}
+                    }, 800);
                 }
                 return;
             }
+            // Not listening — initial denial before the session started
             isListening = false; setUI(false);
             showError('Microphone permission denied. Please allow microphone access and try again.');
+            return;
         }
-        if (e.error === 'service-not-allowed') {
-            isListening = false; setUI(false);
-            showError('Speech blocked.\n\nSettings → Screen Time → Content & Privacy Restrictions → Allowed Apps & Features → Siri → ON\n\nThen reload.');
-        }
+        // network / other errors — let onend handle the restart automatically
     };
     return rec;
 }
@@ -908,6 +918,7 @@ function stopListening() {
     }
     isListening = false;
     permPending = false;
+    if (permRetryInterval) { clearInterval(permRetryInterval); permRetryInterval = null; }
     if (!hasSR) stopBurstDetection();
     else if (recognition) try { recognition.stop(); } catch(_) {}
     // iOS: keep micStream alive — releasing it triggers a new permission dialog next time
@@ -931,6 +942,7 @@ function resetAll() {
     recognition  = null;
     srCycleCount = 0;
     srDoReset    = false;
+    if (permRetryInterval) { clearInterval(permRetryInterval); permRetryInterval = null; }
     if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
 
     document.getElementById('countDisplay').textContent = '0';
