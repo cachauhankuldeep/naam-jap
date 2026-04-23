@@ -366,75 +366,120 @@
             line-height: 1.5;
         }
 
-        /* ── Maha Lakshya (1 Crore) card ── */
+        /* ── Maha Lakshya — fixed right-side panel (desktop) ── */
         .grand-card {
-            background: rgba(255,255,255,0.025);
-            border: 1px solid rgba(255,215,0,0.13);
+            position: fixed;
+            right: 22px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 172px;
+            background: rgba(18, 4, 36, 0.88);
+            border: 1px solid rgba(255,215,0,0.18);
             border-radius: 20px;
-            padding: 16px 22px 14px;
-            max-width: 340px;
-            width: 100%;
-            margin-bottom: 16px;
+            padding: 20px 14px 18px;
             text-align: center;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+            z-index: 50;
         }
         .grand-title {
-            font-size: 0.58rem;
-            color: rgba(255,215,0,0.4);
-            letter-spacing: 4px;
+            font-size: 0.52rem;
+            color: rgba(255,215,0,0.38);
+            letter-spacing: 3px;
             text-transform: uppercase;
-            margin-bottom: 9px;
+            margin-bottom: 12px;
+            line-height: 1.7;
         }
         .grand-done-row {
             display: flex;
-            justify-content: center;
-            align-items: baseline;
-            gap: 6px;
-            margin-bottom: 8px;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            margin-bottom: 10px;
         }
         .grand-done-num {
-            font-size: 1.6rem;
+            font-size: 1.55rem;
             font-weight: 700;
             color: #ffd700;
-            letter-spacing: 1px;
-            text-shadow: 0 0 20px rgba(255,215,0,0.35);
+            letter-spacing: 0.5px;
+            text-shadow: 0 0 24px rgba(255,215,0,0.4);
+            line-height: 1.1;
         }
         .grand-of-label {
-            font-size: 0.72rem;
-            color: rgba(255,215,0,0.38);
+            font-size: 0.6rem;
+            color: rgba(255,215,0,0.32);
+            margin-top: 2px;
         }
         .grand-pct {
-            font-size: 0.72rem;
+            font-size: 0.65rem;
             color: rgba(255,215,0,0.5);
-            margin-left: 2px;
+            margin-top: 1px;
         }
         .grand-bar-bg {
-            height: 4px;
+            height: 3px;
             background: rgba(255,255,255,0.07);
             border-radius: 99px;
-            overflow: hidden;
-            margin-bottom: 10px;
+            overflow: visible;
+            margin-bottom: 12px;
+            position: relative;
         }
         .grand-bar-fill {
             height: 100%;
             background: linear-gradient(90deg, #7c3aed, #ffd700);
             border-radius: 99px;
-            min-width: 3px; /* always show a sliver */
+            min-width: 4px;
             width: 0%;
             transition: width 0.8s ease;
+            box-shadow: 0 0 6px rgba(255,215,0,0.4);
         }
         .grand-eta {
-            font-size: 0.68rem;
-            color: rgba(255,255,255,0.28);
-            letter-spacing: 0.4px;
-            line-height: 1.75;
+            font-size: 0.62rem;
+            color: rgba(255,255,255,0.25);
+            letter-spacing: 0.3px;
+            line-height: 1.85;
         }
         .grand-eta-date {
-            color: rgba(255,215,0,0.65);
+            color: rgba(255,215,0,0.7);
             font-weight: 600;
+            display: block;
+            font-size: 0.68rem;
         }
         .grand-eta-days {
-            color: rgba(255,215,0,0.45);
+            color: rgba(255,215,0,0.4);
+        }
+        .grand-divider {
+            border: none;
+            border-top: 1px solid rgba(255,215,0,0.08);
+            margin: 10px 0;
+        }
+
+        /* Mobile: slim strip pinned to bottom ─────────────── */
+        @media (max-width: 760px) {
+            .grand-card {
+                position: fixed;
+                right: auto; left: 0;
+                top: auto;   bottom: 0;
+                transform: none;
+                width: 100%;
+                border-radius: 0;
+                border-left: none; border-right: none; border-bottom: none;
+                border-top: 1px solid rgba(255,215,0,0.15);
+                padding: 7px 16px 10px;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 10px;
+            }
+            .grand-title    { display: none; }
+            .grand-done-row { flex-direction: row; align-items: baseline; gap: 5px; margin-bottom: 0; flex: 0 0 auto; }
+            .grand-done-num { font-size: 0.95rem; }
+            .grand-of-label { display: none; }
+            .grand-pct      { font-size: 0.62rem; margin-top: 0; }
+            .grand-bar-bg   { flex: 1; margin-bottom: 0; }
+            .grand-divider  { display: none; }
+            .grand-eta      { flex: 0 0 auto; font-size: 0.6rem; text-align: right; line-height: 1.5; }
+            .grand-eta-date { display: inline; font-size: 0.6rem; }
+            body            { padding-bottom: 46px; }
         }
 
         .history-empty {
@@ -479,17 +524,18 @@
     <div class="count-of-target" id="countOfTarget"></div>
 </div>
 
-<!-- Maha Lakshya — 1 Crore Grand Target -->
+<!-- Maha Lakshya — fixed right panel / mobile bottom strip -->
 <div class="grand-card" id="grandCard">
-    <div class="grand-title">Maha Lakshya &nbsp;·&nbsp; 1 Crore Naam Jap</div>
+    <div class="grand-title">Maha<br>Lakshya<br>1 Crore</div>
     <div class="grand-done-row">
         <span class="grand-done-num" id="grandDoneNum">0</span>
-        <span class="grand-of-label">/ 1,00,00,000</span>
+        <span class="grand-of-label">of 1,00,00,000</span>
         <span class="grand-pct" id="grandPct">(0%)</span>
     </div>
     <div class="grand-bar-bg">
         <div class="grand-bar-fill" id="grandBarFill"></div>
     </div>
+    <hr class="grand-divider">
     <div class="grand-eta" id="grandEta">—</div>
 </div>
 
@@ -735,9 +781,9 @@ function updateGrandCard(liveTotalOverride) {
     const avgLabel   = Math.round(avgPerDay).toLocaleString('en-IN');
 
     etaEl.innerHTML =
-        `~${avgLabel}/day avg &nbsp;·&nbsp; ` +
-        `Est. <span class="grand-eta-date">${dateLabel}</span> &nbsp;·&nbsp; ` +
-        `<span class="grand-eta-days">${daysLeft.toLocaleString('en-IN')} days away</span>`;
+        `~${avgLabel}/day avg<br>` +
+        `<span class="grand-eta-date">${dateLabel}</span>` +
+        `<span class="grand-eta-days"> · ${daysLeft.toLocaleString('en-IN')} days</span>`;
 }
 
 // Returns oldest past-date with an unfulfilled manual target, or null
