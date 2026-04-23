@@ -366,6 +366,77 @@
             line-height: 1.5;
         }
 
+        /* ── Maha Lakshya (1 Crore) card ── */
+        .grand-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,215,0,0.13);
+            border-radius: 20px;
+            padding: 16px 22px 14px;
+            max-width: 340px;
+            width: 100%;
+            margin-bottom: 16px;
+            text-align: center;
+            backdrop-filter: blur(8px);
+        }
+        .grand-title {
+            font-size: 0.58rem;
+            color: rgba(255,215,0,0.4);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 9px;
+        }
+        .grand-done-row {
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+        .grand-done-num {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: #ffd700;
+            letter-spacing: 1px;
+            text-shadow: 0 0 20px rgba(255,215,0,0.35);
+        }
+        .grand-of-label {
+            font-size: 0.72rem;
+            color: rgba(255,215,0,0.38);
+        }
+        .grand-pct {
+            font-size: 0.72rem;
+            color: rgba(255,215,0,0.5);
+            margin-left: 2px;
+        }
+        .grand-bar-bg {
+            height: 4px;
+            background: rgba(255,255,255,0.07);
+            border-radius: 99px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .grand-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #7c3aed, #ffd700);
+            border-radius: 99px;
+            min-width: 3px; /* always show a sliver */
+            width: 0%;
+            transition: width 0.8s ease;
+        }
+        .grand-eta {
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.28);
+            letter-spacing: 0.4px;
+            line-height: 1.75;
+        }
+        .grand-eta-date {
+            color: rgba(255,215,0,0.65);
+            font-weight: 600;
+        }
+        .grand-eta-days {
+            color: rgba(255,215,0,0.45);
+        }
+
         .history-empty {
             padding: 20px;
             text-align: center;
@@ -406,6 +477,20 @@
     <div class="count-label">Radha Count</div>
     <div class="count-number" id="countDisplay">0</div>
     <div class="count-of-target" id="countOfTarget"></div>
+</div>
+
+<!-- Maha Lakshya — 1 Crore Grand Target -->
+<div class="grand-card" id="grandCard">
+    <div class="grand-title">Maha Lakshya &nbsp;·&nbsp; 1 Crore Naam Jap</div>
+    <div class="grand-done-row">
+        <span class="grand-done-num" id="grandDoneNum">0</span>
+        <span class="grand-of-label">/ 1,00,00,000</span>
+        <span class="grand-pct" id="grandPct">(0%)</span>
+    </div>
+    <div class="grand-bar-bg">
+        <div class="grand-bar-fill" id="grandBarFill"></div>
+    </div>
+    <div class="grand-eta" id="grandEta">—</div>
 </div>
 
 <!-- Progress bar -->
@@ -486,6 +571,10 @@ let srDoReset        = false; // flag: rebuild SR instance on next onend
 
 const STORAGE_KEY  = 'radha_jap_history';
 const TARGETS_KEY  = 'radha_jap_targets'; // manually set targets for past dates
+const GRAND_TARGET = 10000000;            // 1 crore
+const PACE_START   = '2026-04-18';        // day counting began (used for daily-avg calc)
+
+let savedGrandTotal = 0; // synced from localStorage after each saveToHistory — avoids repeated reads
 
 // ════════════════════════════════════════════════════════
 // WORD MATCHING
@@ -605,6 +694,52 @@ function saveTarget(dateKey, rawVal) {
     }
 }
 
+// ── Maha Lakshya — 1 Crore grand-target card ──────────────
+function updateGrandCard(liveTotalOverride) {
+    const totalDone = (liveTotalOverride !== undefined) ? liveTotalOverride : savedGrandTotal;
+
+    // --- pace calculation ---
+    // Use earliest key in history or PACE_START, whichever is earlier
+    const hist    = loadHistory();
+    const keys    = Object.keys(hist).sort();
+    const startKey = (keys.length && keys[0] < PACE_START) ? keys[0] : PACE_START;
+    const [sy, sm, sd] = startKey.split('-').map(Number);
+
+    const startMs   = new Date(sy, sm - 1, sd).setHours(0, 0, 0, 0);
+    const todayMs   = new Date().setHours(0, 0, 0, 0);
+    // Number of calendar days from start through today (at least 1)
+    const daysSinceStart = Math.max(1, Math.round((todayMs - startMs) / 86400000) + 1);
+
+    const avgPerDay  = totalDone / daysSinceStart;
+    const remaining  = Math.max(0, GRAND_TARGET - totalDone);
+    const pct        = Math.min(100, (totalDone / GRAND_TARGET) * 100);
+
+    // --- DOM updates ---
+    document.getElementById('grandDoneNum').textContent = totalDone.toLocaleString('en-IN');
+    document.getElementById('grandPct').textContent     = `(${pct < 0.01 ? pct.toFixed(4) : pct < 1 ? pct.toFixed(2) : pct.toFixed(1)}%)`;
+    document.getElementById('grandBarFill').style.width = Math.max(0.03, pct) + '%';
+
+    const etaEl = document.getElementById('grandEta');
+    if (totalDone >= GRAND_TARGET) {
+        etaEl.innerHTML = `<span class="grand-eta-date">🎉 1 Crore Complete! Jai Radha!</span>`;
+        return;
+    }
+    if (avgPerDay < 1) {
+        etaEl.textContent = 'Start chanting to see your estimated completion date…';
+        return;
+    }
+
+    const daysLeft   = Math.ceil(remaining / avgPerDay);
+    const finishDate = new Date(todayMs + daysLeft * 86400000);
+    const dateLabel  = finishDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const avgLabel   = Math.round(avgPerDay).toLocaleString('en-IN');
+
+    etaEl.innerHTML =
+        `~${avgLabel}/day avg &nbsp;·&nbsp; ` +
+        `Est. <span class="grand-eta-date">${dateLabel}</span> &nbsp;·&nbsp; ` +
+        `<span class="grand-eta-days">${daysLeft.toLocaleString('en-IN')} days away</span>`;
+}
+
 // Returns oldest past-date with an unfulfilled manual target, or null
 function getActiveBackfillDate() {
     const hist    = loadHistory();
@@ -663,6 +798,9 @@ function saveToHistory(n) {
     }
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(hist));
+    // Update cached grand total so addCount can pass a live value without re-reading localStorage
+    savedGrandTotal = Object.values(hist).reduce((a, b) => a + b, 0);
+    updateGrandCard();
     updateBackfillBanner();
     if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
 }
@@ -1048,6 +1186,8 @@ function addCount(n) {
     el.style.color = '#ffffff';
     setTimeout(() => { el.style.transform = ''; el.style.color = ''; }, 200);
     if (target) updateProgress();
+    // Live grand-card update: savedGrandTotal (last flush) + unsavedCount = true running total
+    updateGrandCard(savedGrandTotal + unsavedCount);
 }
 
 function showError(msg) {
@@ -1145,6 +1285,9 @@ function resetAll() {
     updateBackfillBanner();
 }
 
+// Initialise cached grand total and paint the card on page load
+savedGrandTotal = Object.values(loadHistory()).reduce((a, b) => a + b, 0);
+updateGrandCard();
 // Show backfill banner on page load if a pending target already exists
 updateBackfillBanner();
 </script>
