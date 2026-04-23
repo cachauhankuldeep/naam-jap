@@ -317,13 +317,54 @@
         .day-row {
             display: flex;
             justify-content: space-between;
-            padding: 6px 0;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 0;
             border-bottom: 1px solid rgba(255,255,255,0.04);
             font-size: 0.78rem;
         }
         .day-row:last-child { border-bottom: none; }
-        .day-name { color: rgba(255,255,255,0.5); }
+        .day-name { color: rgba(255,255,255,0.5); flex: 1; min-width: 0; }
+
+        /* ── Past-date target input ── */
+        .day-target-cell { flex: 0 0 auto; }
+        .day-target-input {
+            width: 70px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 6px;
+            color: #ffd700;
+            font-size: 0.68rem;
+            padding: 3px 6px;
+            text-align: center;
+            outline: none;
+            -moz-appearance: textfield;
+        }
+        .day-target-input::-webkit-outer-spin-button,
+        .day-target-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .day-target-input:focus { border-color: rgba(255,215,0,0.6); background: rgba(255,255,255,0.1); }
+        .day-target-input::placeholder { color: rgba(255,215,0,0.2); }
+        .day-count-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: 0 0 auto; }
         .day-count { color: rgba(255,215,0,0.7); font-weight: 600; }
+        .day-shortfall { font-size: 0.62rem; color: #f59e0b; }
+        .day-fulfilled { font-size: 0.62rem; color: #4ade80; }
+
+        /* ── Backfill banner ── */
+        .backfill-banner {
+            font-size: 0.75rem;
+            color: #f59e0b;
+            text-align: center;
+            margin-bottom: 14px;
+            padding: 7px 16px;
+            background: rgba(245,158,11,0.08);
+            border: 1px solid rgba(245,158,11,0.28);
+            border-radius: 10px;
+            max-width: 340px;
+            width: 100%;
+            display: none;
+            letter-spacing: 0.3px;
+            line-height: 1.5;
+        }
 
         .history-empty {
             padding: 20px;
@@ -393,6 +434,9 @@
     <span id="statusText">Tap Start to begin</span>
 </div>
 
+<!-- Backfill banner (shown when a past-date target is being filled) -->
+<div class="backfill-banner" id="backfillBanner"></div>
+
 <!-- Controls -->
 <div class="controls">
     <button class="btn btn-start" id="startBtn" onclick="startListening()">▶ Start</button>
@@ -440,7 +484,8 @@ let permRetryInterval = null; // independent interval that retries rec.start() d
 let srCycleCount     = 0;   // recognitions in current SR instance (for proactive reset)
 let srDoReset        = false; // flag: rebuild SR instance on next onend
 
-const STORAGE_KEY = 'radha_jap_history';
+const STORAGE_KEY  = 'radha_jap_history';
+const TARGETS_KEY  = 'radha_jap_targets'; // manually set targets for past dates
 
 // ════════════════════════════════════════════════════════
 // WORD MATCHING
@@ -531,12 +576,84 @@ function loadHistory() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
 }
 
+// ── Past-date targets ──────────────────────────────────────
+function loadTargets() {
+    try { return JSON.parse(localStorage.getItem(TARGETS_KEY) || '{}'); } catch { return {}; }
+}
+
+function saveTarget(dateKey, rawVal) {
+    const targets = loadTargets();
+    const val = parseInt(rawVal, 10);
+    if (!val || val < 1) {
+        delete targets[dateKey];
+    } else {
+        targets[dateKey] = val;
+    }
+    localStorage.setItem(TARGETS_KEY, JSON.stringify(targets));
+    updateBackfillBanner();
+    if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
+}
+
+// Returns oldest past-date with an unfulfilled manual target, or null
+function getActiveBackfillDate() {
+    const hist    = loadHistory();
+    const targets = loadTargets();
+    const today   = todayKey();
+    const pending = Object.keys(targets)
+        .filter(k => k < today && (targets[k] || 0) > (hist[k] || 0))
+        .sort(); // ascending = oldest first
+    return pending.length ? pending[0] : null;
+}
+
+function updateBackfillBanner() {
+    const el = document.getElementById('backfillBanner');
+    if (!el) return;
+    const dk = getActiveBackfillDate();
+    if (dk) {
+        const hist     = loadHistory();
+        const targets  = loadTargets();
+        const done     = hist[dk] || 0;
+        const tgt      = targets[dk];
+        const need     = tgt - done;
+        const [dy, dm, dd] = dk.split('-');
+        const label    = new Date(+dy, +dm-1, +dd)
+                           .toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+        el.textContent = `🔄 Filling ${label} target · ${done.toLocaleString('en-IN')} / ${tgt.toLocaleString('en-IN')} · ${need.toLocaleString('en-IN')} more to go`;
+        el.style.display = 'block';
+    } else {
+        el.style.display = 'none';
+    }
+}
+
+// ── Smart save: fills past-date targets first, then today ──
 function saveToHistory(n) {
     if (n <= 0) return;
-    const hist = loadHistory();
-    const key  = todayKey();
-    hist[key]  = (hist[key] || 0) + n;
+    const hist    = loadHistory();
+    const targets = loadTargets();
+    const today   = todayKey();
+
+    // Find all past dates with unfulfilled targets, oldest first
+    const pending = Object.keys(targets)
+        .filter(k => k < today && (targets[k] || 0) > (hist[k] || 0))
+        .sort();
+
+    let rem = n;
+    for (const dk of pending) {
+        if (rem <= 0) break;
+        const shortfall = targets[dk] - (hist[dk] || 0);
+        const fill      = Math.min(rem, shortfall);
+        hist[dk]        = (hist[dk] || 0) + fill;
+        rem            -= fill;
+    }
+
+    // Whatever's left goes to today
+    if (rem > 0) {
+        hist[today] = (hist[today] || 0) + rem;
+    }
+
     localStorage.setItem(STORAGE_KEY, JSON.stringify(hist));
+    updateBackfillBanner();
+    if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
 }
 
 const MONTHS = ['January','February','March','April','May','June',
@@ -578,13 +695,50 @@ function renderHistory() {
             </div>
             <div class="day-list" id="days-${mk}">`;
 
+        const targets = loadTargets();
+        const today   = todayKey();
         for (const dk of days) {
             const [dy, dm, dd] = dk.split('-');
             const dateObj  = new Date(parseInt(dy), parseInt(dm)-1, parseInt(dd));
             const dayName  = dateObj.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+            const isToday  = dk === today;
+            const done     = hist[dk] || 0;
+            const tgt      = targets[dk] || 0;
+
+            // Target input (only for past dates, not today)
+            let targetCell = '';
+            if (!isToday) {
+                const tgtVal = tgt ? tgt : '';
+                targetCell = `<span class="day-target-cell">
+                    <input class="day-target-input" type="number" min="1"
+                           placeholder="Target"
+                           value="${tgtVal}"
+                           onclick="event.stopPropagation()"
+                           onchange="saveTarget('${dk}', this.value)"
+                           title="Set target for this date — current counting will fill this first" />
+                </span>`;
+            } else {
+                targetCell = `<span class="day-target-cell"></span>`;
+            }
+
+            // Shortfall / fulfilled badge
+            let badge = '';
+            if (!isToday && tgt > 0) {
+                if (done >= tgt) {
+                    badge = `<span class="day-fulfilled">✓ done</span>`;
+                } else {
+                    const need = tgt - done;
+                    badge = `<span class="day-shortfall">needs ${need.toLocaleString('en-IN')}</span>`;
+                }
+            }
+
             html += `<div class="day-row">
-                <span class="day-name">${dayName}</span>
-                <span class="day-count">${hist[dk].toLocaleString('en-IN')}</span>
+                <span class="day-name">${isToday ? '📅 Today · ' : ''}${dayName}</span>
+                ${targetCell}
+                <span class="day-count-cell">
+                    <span class="day-count">${done.toLocaleString('en-IN')}</span>
+                    ${badge}
+                </span>
             </div>`;
         }
         html += `</div></div>`;
@@ -848,11 +1002,16 @@ function addCount(n) {
     count += n;
     unsavedCount += n;
 
-    // Batch localStorage writes — flush after 3s of no new counts
     clearTimeout(saveDebounce);
-    saveDebounce = setTimeout(() => {
-        if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
-    }, 3000);
+    if (getActiveBackfillDate()) {
+        // Backfill active — save immediately so the banner count stays live-accurate
+        saveToHistory(unsavedCount); unsavedCount = 0;
+    } else {
+        // Normal mode — batch writes, flush after 3s of silence
+        saveDebounce = setTimeout(() => {
+            if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
+        }, 3000);
+    }
 
     const el = document.getElementById('countDisplay');
     el.textContent = count.toLocaleString('en-IN');
@@ -955,7 +1114,11 @@ function resetAll() {
     document.getElementById('stats').textContent = '';
     document.getElementById('errorBox').style.display = 'none';
     document.getElementById('statusText').textContent = 'Tap Start to begin';
+    updateBackfillBanner();
 }
+
+// Show backfill banner on page load if a pending target already exists
+updateBackfillBanner();
 </script>
 </body>
 </html>
