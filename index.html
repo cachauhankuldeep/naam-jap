@@ -592,6 +592,17 @@ function saveTarget(dateKey, rawVal) {
     localStorage.setItem(TARGETS_KEY, JSON.stringify(targets));
     updateBackfillBanner();
     if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
+
+    // Flash the input green briefly so the user sees the save happened
+    const inp = document.getElementById(`ti-${dateKey}`);
+    if (inp) {
+        inp.style.borderColor = '#4ade80';
+        inp.style.background  = 'rgba(74,222,128,0.12)';
+        setTimeout(() => {
+            inp.style.borderColor = '';
+            inp.style.background  = '';
+        }, 1000);
+    }
 }
 
 // Returns oldest past-date with an unfulfilled manual target, or null
@@ -661,6 +672,13 @@ const MONTHS = ['January','February','March','April','May','June',
 
 function renderHistory() {
     const panel = document.getElementById('historyPanel');
+
+    // Remember which months were expanded so we can restore them after re-render
+    const openMonths = new Set(
+        Array.from(panel.querySelectorAll('.day-list.open'))
+             .map(el => el.id.replace('days-', ''))
+    );
+
     const hist  = loadHistory();
     const keys  = Object.keys(hist).sort().reverse(); // newest first
 
@@ -713,9 +731,11 @@ function renderHistory() {
                     <input class="day-target-input" type="number" min="1"
                            placeholder="Target"
                            value="${tgtVal}"
+                           id="ti-${dk}"
                            onclick="event.stopPropagation()"
-                           onchange="saveTarget('${dk}', this.value)"
-                           title="Set target for this date — current counting will fill this first" />
+                           onblur="saveTarget('${dk}', this.value)"
+                           onkeydown="if(event.key==='Enter'){saveTarget('${dk}',this.value);this.blur();event.preventDefault();event.stopPropagation();}"
+                           title="Type target and press Enter (or click away) to save" />
                 </span>`;
             } else {
                 targetCell = `<span class="day-target-cell"></span>`;
@@ -745,6 +765,14 @@ function renderHistory() {
     }
 
     panel.innerHTML = html;
+
+    // Restore expanded months
+    for (const mk of openMonths) {
+        const list  = document.getElementById(`days-${mk}`);
+        const arrow = document.getElementById(`marrow-${mk}`);
+        if (list)  list.classList.add('open');
+        if (arrow) arrow.classList.add('open');
+    }
 }
 
 function toggleHistory() {
