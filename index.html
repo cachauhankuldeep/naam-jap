@@ -490,6 +490,65 @@
             letter-spacing: 1px;
         }
 
+        /* ── Chrome permission re-ask modal ── */
+        .perm-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 2, 20, 0.94);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+        }
+        .perm-modal.show { display: flex; }
+        .perm-box {
+            max-width: 310px;
+            text-align: center;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,215,0,0.2);
+            border-radius: 24px;
+            padding: 32px 24px 26px;
+            box-shadow: 0 0 80px rgba(255,215,0,0.08);
+        }
+        .perm-icon  { font-size: 2.2rem; margin-bottom: 14px; }
+        .perm-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #ffd700;
+            letter-spacing: 1px;
+            margin-bottom: 18px;
+        }
+        .perm-body {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.68);
+            line-height: 1.8;
+            margin-bottom: 22px;
+        }
+        .perm-body strong { color: #ffd700; }
+        .perm-body .allow-word {
+            background: rgba(74,222,128,0.15);
+            border: 1px solid rgba(74,222,128,0.4);
+            color: #4ade80;
+            border-radius: 6px;
+            padding: 1px 8px;
+            font-weight: 700;
+        }
+        .perm-count-line {
+            font-size: 0.78rem;
+            color: rgba(255,215,0,0.55);
+            margin-top: 10px;
+        }
+        .perm-tip {
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.28);
+            border-top: 1px solid rgba(255,215,0,0.1);
+            padding-top: 16px;
+            line-height: 1.75;
+        }
+        .perm-tip strong { color: rgba(255,215,0,0.55); }
+
         /* ── Error ── */
         .error-box {
             margin-top: 14px;
@@ -513,6 +572,27 @@
     </style>
 </head>
 <body>
+
+<!-- Chrome permission re-ask modal -->
+<div class="perm-modal" id="permModal">
+    <div class="perm-box">
+        <div class="perm-icon">⏸</div>
+        <div class="perm-title">Chrome Needs One Click</div>
+        <div class="perm-body">
+            Look at the <strong>very top</strong> of your Chrome window.<br>
+            A bar says:<br>
+            <em>"… wants to use your microphone"</em><br><br>
+            Click <span class="allow-word">Allow</span> there.<br>
+            Counting resumes <strong>automatically</strong> — no need to press Start.
+            <div class="perm-count-line">Your <strong id="permCountDisplay">0</strong> chants are saved ✓</div>
+        </div>
+        <div class="perm-tip">
+            <strong>Prevent this permanently:</strong><br>
+            Click 🔒 in Chrome's address bar<br>
+            → Microphone → <strong>Always Allow</strong>
+        </div>
+    </div>
+</div>
 
 <div class="deity-name">राधा</div>
 <div class="subtitle">Naam Jap Counter</div>
@@ -1001,7 +1081,8 @@ function buildRecognition() {
     rec.onstart = () => {
         permPending = false;
         if (permRetryInterval) { clearInterval(permRetryInterval); permRetryInterval = null; }
-        // Clear inline amber styles so the CSS green 'on' class takes effect
+        // Hide permission modal and restore green dot
+        document.getElementById('permModal').classList.remove('show');
         const dot = document.getElementById('dot');
         dot.style.background = '';
         dot.style.boxShadow = '';
@@ -1059,10 +1140,17 @@ function buildRecognition() {
             if (isListening) {
                 if (!permPending) {
                     permPending = true;
-                    document.getElementById('statusText').textContent = '⚠️ Click Allow in browser bar ↑';
+                    // Flush any unsaved counts immediately so nothing is lost during the pause
+                    if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
+                    clearTimeout(saveDebounce);
+                    // Amber dot + status text (visible behind modal too)
                     document.getElementById('dot').style.background = '#f59e0b';
                     document.getElementById('dot').style.boxShadow = '0 0 10px #f59e0b';
-                    // Independent interval so the retry loop never stops even if rec.start() throws.
+                    document.getElementById('statusText').textContent = '⚠️ Click Allow in browser bar ↑';
+                    // Show prominent modal
+                    document.getElementById('permCountDisplay').textContent = count.toLocaleString('en-IN');
+                    document.getElementById('permModal').classList.add('show');
+                    // Independent interval — retries rec.start() every 800ms regardless of onend
                     permRetryInterval = setInterval(() => {
                         if (!permPending || !isListening) {
                             clearInterval(permRetryInterval); permRetryInterval = null; return;
@@ -1292,6 +1380,7 @@ function stopListening() {
     isListening = false;
     permPending = false;
     if (permRetryInterval) { clearInterval(permRetryInterval); permRetryInterval = null; }
+    document.getElementById('permModal').classList.remove('show');
     if (!hasSR) stopBurstDetection();
     else if (recognition) try { recognition.stop(); } catch(_) {}
     // iOS: keep micStream alive — releasing it triggers a new permission dialog next time
@@ -1303,6 +1392,7 @@ function stopListening() {
 }
 
 function resetAll() {
+    if (!confirm('Reset session counter to 0?\n\nYour full history is NOT deleted — only today\'s running count resets.')) return;
     stopListening();
     count            = 0;
     target           = 0;
