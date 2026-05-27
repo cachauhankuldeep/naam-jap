@@ -569,6 +569,36 @@
             .count-number { font-size: 5rem; }
             .counter-card { padding: 22px 32px 18px; }
         }
+
+        /* ── Auto-save row ── */
+        .autosave-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn-autosave {
+            padding: 6px 14px;
+            border: 1px solid rgba(255,215,0,0.22);
+            border-radius: 20px;
+            background: rgba(255,215,0,0.07);
+            color: rgba(255,215,0,0.65);
+            font-size: 0.72rem;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            transition: background 0.2s, border-color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn-autosave:hover { background: rgba(255,215,0,0.14); border-color: rgba(255,215,0,0.4); }
+        .autosave-status {
+            font-size: 0.68rem;
+            color: rgba(255,255,255,0.28);
+            letter-spacing: 0.5px;
+        }
+        .autosave-status.ok  { color: #4ade80; }
+        .autosave-status.warn{ color: #f59e0b; }
     </style>
 </head>
 <body>
@@ -671,6 +701,14 @@
         <span class="history-arrow" id="histArrow">▼</span>
     </div>
     <div class="history-panel" id="historyPanel"></div>
+</div>
+
+<!-- Auto-save to local file -->
+<div class="history-section" style="margin-top:10px;">
+    <div class="autosave-row">
+        <button class="btn-autosave" id="autoSaveBtn" onclick="setupAutoSave()">💾 Set Auto-Save File</button>
+        <span class="autosave-status" id="autoSaveStatus">Not set up — data only saved in browser</span>
+    </div>
 </div>
 
 <div class="error-box" id="errorBox"></div>
@@ -1426,6 +1464,136 @@ savedGrandTotal = Object.values(loadHistory()).reduce((a, b) => a + b, 0);
 updateGrandCard();
 // Show backfill banner on page load if a pending target already exists
 updateBackfillBanner();
+
+// ════════════════════════════════════════════════════════
+// AUTO-SAVE TO LOCAL FILE
+// Uses File System Access API (Chrome desktop).
+// The file handle is stored in IndexedDB so it survives page reloads.
+// Auto-saves every 30 s + on tab hide + on page close.
+// ════════════════════════════════════════════════════════
+const AUTOSAVE_DB      = 'naam_jap_db';
+const AUTOSAVE_STORE   = 'handles';
+const AUTOSAVE_KEY     = 'auto_save_handle';
+
+let autoSaveHandle   = null;
+let autoSaveInterval = null;
+
+// ── IndexedDB helpers ─────────────────────────────────
+function openHandleDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(AUTOSAVE_DB, 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore(AUTOSAVE_STORE);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = ()  => reject();
+    });
+}
+async function getStoredHandle() {
+    try {
+        const db = await openHandleDB();
+        return new Promise(res => {
+            const req = db.transaction(AUTOSAVE_STORE,'readonly').objectStore(AUTOSAVE_STORE).get(AUTOSAVE_KEY);
+            req.onsuccess = () => res(req.result || null);
+            req.onerror   = () => res(null);
+        });
+    } catch { return null; }
+}
+async function putStoredHandle(handle) {
+    try {
+        const db = await openHandleDB();
+        await new Promise(res => {
+            const tx = db.transaction(AUTOSAVE_STORE,'readwrite');
+            tx.objectStore(AUTOSAVE_STORE).put(handle, AUTOSAVE_KEY);
+            tx.oncomplete = res;
+        });
+    } catch {}
+}
+
+// ── Write data to file ────────────────────────────────
+async function doAutoSave() {
+    if (!autoSaveHandle) return;
+    try {
+        const payload = JSON.stringify({
+            history : loadHistory(),
+            targets : loadTargets(),
+            savedAt : new Date().toISOString(),
+            version : 1
+        }, null, 2);
+        const writable = await autoSaveHandle.createWritable();
+        await writable.write(payload);
+        await writable.close();
+        setSaveStatus('✓ Saved at ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}), 'ok');
+    } catch {
+        setSaveStatus('⚠️ Save failed — click button to re-enable', 'warn');
+        autoSaveHandle = null;
+        if (autoSaveInterval) { clearInterval(autoSaveInterval); autoSaveInterval = null; }
+    }
+}
+
+function setSaveStatus(msg, cls) {
+    const el = document.getElementById('autoSaveStatus');
+    const btn = document.getElementById('autoSaveBtn');
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'autosave-status' + (cls ? ' ' + cls : '');
+    if (btn) btn.textContent = autoSaveHandle ? '💾 Saving to file' : '💾 Set Auto-Save File';
+}
+
+function startSaveTimer() {
+    if (autoSaveInterval) clearInterval(autoSaveInterval);
+    autoSaveInterval = setInterval(doAutoSave, 30000); // every 30 s
+}
+
+// ── First-time setup (user picks file location) ───────
+async function setupAutoSave() {
+    if (!window.showSaveFilePicker) {
+        alert('Auto-save to file works in Chrome on desktop.\n\nOn mobile, your data is saved automatically in the browser storage.');
+        return;
+    }
+    // If we already have a handle, just re-request permission
+    if (autoSaveHandle) {
+        const perm = await autoSaveHandle.requestPermission({ mode: 'readwrite' });
+        if (perm === 'granted') { await doAutoSave(); startSaveTimer(); return; }
+    }
+    try {
+        const handle = await window.showSaveFilePicker({
+            suggestedName: 'naam_jap_backup.json',
+            types: [{ description: 'Naam Jap Backup', accept: { 'application/json': ['.json'] } }]
+        });
+        autoSaveHandle = handle;
+        await putStoredHandle(handle);
+        await doAutoSave();   // immediate first save
+        startSaveTimer();
+    } catch { /* user cancelled */ }
+}
+
+// ── Restore on startup ────────────────────────────────
+(async function initAutoSave() {
+    const handle = await getStoredHandle();
+    if (!handle) return;
+    try {
+        const perm = await handle.queryPermission({ mode: 'readwrite' });
+        if (perm === 'granted') {
+            autoSaveHandle = handle;
+            startSaveTimer();
+            setSaveStatus('✓ Auto-save ON', 'ok');
+        } else {
+            // Permission will be re-requested when user clicks the button
+            autoSaveHandle = handle;
+            setSaveStatus('🔑 Click button to re-enable auto-save', 'warn');
+        }
+    } catch {}
+})();
+
+// ── Save on tab hide / page close ─────────────────────
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
+        doAutoSave();
+    }
+});
+window.addEventListener('beforeunload', () => {
+    if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
+});
 </script>
 </body>
 </html>
