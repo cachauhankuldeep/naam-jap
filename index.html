@@ -1459,6 +1459,29 @@ function resetAll() {
     updateBackfillBanner();
 }
 
+// ════════════════════════════════════════════════════════
+// SEED HISTORICAL DATA (Apr 18 – May 26, 2026 = 4,00,000)
+// Runs once when there is no existing history at all.
+// Safe: skipped completely if any history data already exists.
+// ════════════════════════════════════════════════════════
+(function seedHistory() {
+    const existing = loadHistory();
+    if (Object.keys(existing).length > 0) return; // already has data — skip
+
+    const dates = [];
+    const start = new Date('2026-04-18');
+    const end   = new Date('2026-05-26');
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        dates.push(d.toISOString().slice(0, 10));
+    }
+    const total  = 400000;
+    const perDay = Math.floor(total / dates.length);  // 10256
+    const extras = total - perDay * dates.length;      // 16
+    const hist   = {};
+    dates.forEach((dk, i) => { hist[dk] = perDay + (i < extras ? 1 : 0); });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(hist));
+})();
+
 // Initialise cached grand total and paint the card on page load
 savedGrandTotal = Object.values(loadHistory()).reduce((a, b) => a + b, 0);
 updateGrandCard();
