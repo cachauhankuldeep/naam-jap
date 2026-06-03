@@ -570,6 +570,60 @@
             .counter-card { padding: 22px 32px 18px; }
         }
 
+        /* ── Data restore modal ── */
+        .restore-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(8,2,20,0.96);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+        }
+        .restore-modal.show { display: flex; }
+        .restore-box {
+            max-width: 320px;
+            width: 100%;
+            text-align: center;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,215,0,0.22);
+            border-radius: 24px;
+            padding: 32px 24px 28px;
+            box-shadow: 0 0 80px rgba(255,215,0,0.08);
+        }
+        .restore-icon  { font-size: 2.2rem; margin-bottom: 14px; }
+        .restore-title {
+            font-size: 1rem; font-weight: 700;
+            color: #ffd700; letter-spacing: 1px; margin-bottom: 12px;
+        }
+        .restore-body {
+            font-size: 0.83rem; color: rgba(255,255,255,0.65);
+            line-height: 1.75; margin-bottom: 24px;
+        }
+        .restore-body strong { color: #ffd700; }
+        .restore-btns { display: flex; flex-direction: column; gap: 10px; }
+        .btn-restore-pick {
+            padding: 12px 20px;
+            background: linear-gradient(135deg,#7c3aed,#ffd700);
+            border: none; border-radius: 50px;
+            color: #1a0533; font-size: 0.9rem; font-weight: 700;
+            cursor: pointer; letter-spacing: 0.3px;
+            transition: opacity 0.2s;
+        }
+        .btn-restore-pick:hover { opacity: 0.88; }
+        .btn-restore-fresh {
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 50px;
+            color: rgba(255,255,255,0.4); font-size: 0.78rem;
+            cursor: pointer; letter-spacing: 0.3px;
+            transition: background 0.2s;
+        }
+        .btn-restore-fresh:hover { background: rgba(255,255,255,0.1); }
+
         /* ── Auto-save row ── */
         .autosave-row {
             display: flex;
@@ -623,6 +677,27 @@
         </div>
     </div>
 </div>
+
+<!-- Data restore modal (shown when localStorage is empty on load) -->
+<div class="restore-modal" id="restoreModal">
+    <div class="restore-box">
+        <div class="restore-icon">🙏</div>
+        <div class="restore-title">Restore Your Chanting Data</div>
+        <div class="restore-body">
+            Chrome cleared your local data.<br><br>
+            If you set up auto-save earlier, pick your<br>
+            <strong>naam_jap_backup.json</strong> file<br>
+            and everything will be restored instantly.
+        </div>
+        <div class="restore-btns">
+            <button class="btn-restore-pick" onclick="pickAndRestoreFile()">📂 Pick Backup File &amp; Restore</button>
+            <button class="btn-restore-fresh" onclick="startFresh()">No backup — start fresh with base data</button>
+        </div>
+    </div>
+</div>
+<!-- Hidden file input for fallback restore (non-Chrome / mobile) -->
+<input type="file" id="restoreFileInput" accept=".json" style="display:none"
+       onchange="handleRestoreFileInput(this)">
 
 <div class="deity-name">राधा</div>
 <div class="subtitle">Naam Jap Counter</div>
@@ -1459,34 +1534,85 @@ function resetAll() {
     updateBackfillBanner();
 }
 
-// ════════════════════════════════════════════════════════
-// SEED HISTORICAL DATA (Apr 18 – May 26, 2026 = 4,00,000)
-// Runs once when there is no existing history at all.
-// Safe: skipped completely if any history data already exists.
-// ════════════════════════════════════════════════════════
-(function seedHistory() {
-    const existing = loadHistory();
-    if (Object.keys(existing).length > 0) return; // already has data — skip
-
-    const dates = [];
-    const start = new Date('2026-04-18');
-    const end   = new Date('2026-05-26');
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        dates.push(d.toISOString().slice(0, 10));
-    }
-    const total  = 400000;
-    const perDay = Math.floor(total / dates.length);  // 10256
-    const extras = total - perDay * dates.length;      // 16
-    const hist   = {};
-    dates.forEach((dk, i) => { hist[dk] = perDay + (i < extras ? 1 : 0); });
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(hist));
-})();
-
 // Initialise cached grand total and paint the card on page load
 savedGrandTotal = Object.values(loadHistory()).reduce((a, b) => a + b, 0);
 updateGrandCard();
 // Show backfill banner on page load if a pending target already exists
 updateBackfillBanner();
+// Show restore modal if history is empty
+checkAndMaybeShowRestore();
+
+// ════════════════════════════════════════════════════════
+// RESTORE FROM BACKUP FILE
+// Shows a modal when localStorage is empty (e.g. after Chrome
+// profile re-login clears site data). User picks their backup
+// JSON file and all data is restored instantly.
+// ════════════════════════════════════════════════════════
+function checkAndMaybeShowRestore() {
+    if (Object.keys(loadHistory()).length === 0) {
+        document.getElementById('restoreModal').classList.add('show');
+    }
+}
+
+async function pickAndRestoreFile() {
+    // Modern Chrome: use File System Access API picker
+    if (window.showOpenFilePicker) {
+        try {
+            const [handle] = await window.showOpenFilePicker({
+                types: [{ description: 'Naam Jap Backup', accept: {'application/json': ['.json']} }],
+                multiple: false
+            });
+            const file = await handle.getFile();
+            await processRestoreData(file);
+            return;
+        } catch { return; } // user cancelled
+    }
+    // Fallback: standard <input type=file>
+    document.getElementById('restoreFileInput').click();
+}
+
+async function handleRestoreFileInput(input) {
+    if (input.files && input.files[0]) await processRestoreData(input.files[0]);
+    input.value = ''; // reset so same file can be re-picked
+}
+
+async function processRestoreData(file) {
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data.history || Object.keys(data.history).length === 0) {
+            alert('This file has no chanting data.\nPlease pick your naam_jap_backup.json file.');
+            return;
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.history));
+        if (data.targets) localStorage.setItem(TARGETS_KEY, JSON.stringify(data.targets));
+        savedGrandTotal = Object.values(data.history).reduce((a,b)=>a+b,0);
+        updateGrandCard();
+        updateBackfillBanner();
+        if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
+        document.getElementById('restoreModal').classList.remove('show');
+        setSaveStatus('✓ Data restored! Click 💾 to re-enable auto-save', 'warn');
+    } catch {
+        alert('Could not read the file.\nPlease pick your naam_jap_backup.json backup file.');
+    }
+}
+
+function startFresh() {
+    // Seed with 4,00,000 base data (Apr 18 – May 26, 2026)
+    const dates = [];
+    const s = new Date('2026-04-18'), e = new Date('2026-05-26');
+    for (let d = new Date(s); d <= e; d.setDate(d.getDate()+1))
+        dates.push(d.toISOString().slice(0,10));
+    const total = 400000, perDay = Math.floor(total/dates.length), extras = total - perDay*dates.length;
+    const hist  = {};
+    dates.forEach((dk,i) => { hist[dk] = perDay + (i < extras ? 1 : 0); });
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(hist));
+    savedGrandTotal = Object.values(hist).reduce((a,b)=>a+b,0);
+    updateGrandCard();
+    updateBackfillBanner();
+    document.getElementById('restoreModal').classList.remove('show');
+    setSaveStatus('Base data loaded. Click 💾 to set up auto-save.', 'warn');
+}
 
 // ════════════════════════════════════════════════════════
 // AUTO-SAVE TO LOCAL FILE
