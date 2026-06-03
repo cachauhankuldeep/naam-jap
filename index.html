@@ -673,6 +673,135 @@
         }
         .autosave-status.ok  { color: #4ade80; }
         .autosave-status.warn{ color: #f59e0b; }
+
+        /* ── Milestone trackers (500K + 1M) ── */
+        .milestone-row {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+            max-width: 380px;
+            margin-bottom: 24px;
+        }
+        .milestone-card {
+            flex: 1;
+            background: rgba(255,255,255,0.035);
+            border: 1px solid rgba(255,215,0,0.18);
+            border-radius: 20px;
+            padding: 14px 12px 12px;
+            text-align: center;
+            backdrop-filter: blur(8px);
+            transition: opacity 0.9s ease, transform 0.9s ease, border-color 0.4s ease;
+            overflow: hidden;
+            position: relative;
+        }
+        .milestone-card.done {
+            opacity: 0;
+            transform: scale(0.82);
+            pointer-events: none;
+        }
+        .milestone-card-title {
+            font-size: 0.52rem;
+            color: rgba(255,215,0,0.48);
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            margin-bottom: 11px;
+        }
+        .milestone-count {
+            font-size: 0.85rem;
+            color: #ffd700;
+            font-weight: 700;
+            display: block;
+            margin-bottom: 2px;
+            text-shadow: 0 0 12px rgba(255,215,0,0.4);
+        }
+        .milestone-sub {
+            font-size: 0.58rem;
+            color: rgba(255,215,0,0.38);
+            letter-spacing: 0.3px;
+            line-height: 1.5;
+        }
+
+        /* Mala beads (500K) */
+        .mala-beads {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            margin-bottom: 9px;
+            flex-wrap: wrap;
+        }
+        .bead {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.07);
+            border: 1px solid rgba(255,215,0,0.12);
+            transition: background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease;
+        }
+        .bead.lit {
+            background: radial-gradient(circle at 35% 32%, #fffde7, #ffd700 55%, #f59e0b 85%);
+            border-color: rgba(255,215,0,0.75);
+            box-shadow: 0 0 7px rgba(255,215,0,0.65), 0 0 14px rgba(255,215,0,0.25);
+        }
+        @keyframes beadPop {
+            0%   { transform: scale(0.45); }
+            70%  { transform: scale(1.18); }
+            100% { transform: scale(1); }
+        }
+        .bead.just-lit { animation: beadPop 0.38s cubic-bezier(0.34,1.56,0.64,1); }
+
+        /* Ring gauge (1M) */
+        .ring-wrap {
+            position: relative;
+            width: 78px;
+            height: 78px;
+            margin: 0 auto 9px;
+        }
+        .ring-svg {
+            width: 78px;
+            height: 78px;
+            transform: rotate(-90deg);
+            overflow: visible;
+        }
+        .ring-bg {
+            fill: none;
+            stroke: rgba(255,255,255,0.07);
+            stroke-width: 7;
+        }
+        .ring-fill {
+            fill: none;
+            stroke: url(#ringGrad);
+            stroke-width: 7;
+            stroke-linecap: round;
+            stroke-dasharray: 188.5;
+            stroke-dashoffset: 188.5;
+            transition: stroke-dashoffset 0.9s ease;
+            filter: drop-shadow(0 0 5px rgba(255,215,0,0.5));
+        }
+        .ring-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            line-height: 1.2;
+        }
+        .ring-pct {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #ffd700;
+            display: block;
+            text-shadow: 0 0 10px rgba(255,215,0,0.5);
+        }
+        .ring-label {
+            font-size: 0.38rem;
+            color: rgba(255,215,0,0.4);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+        @keyframes ringPulse {
+            0%,100% { filter: drop-shadow(0 0 5px rgba(255,215,0,0.5)); }
+            50%      { filter: drop-shadow(0 0 12px rgba(255,215,0,0.9)); }
+        }
+        .ring-fill.pulsing { animation: ringPulse 1.6s ease-in-out infinite; }
     </style>
 </head>
 <body>
@@ -778,6 +907,42 @@
 </div>
 
 <div class="stats" id="stats"></div>
+
+<!-- Milestone trackers: 500K (mala beads) + 1M (ring gauge) -->
+<div class="milestone-row" id="milestoneRow">
+
+  <!-- 500K — Mala Beads -->
+  <div class="milestone-card" id="m500k">
+    <div class="milestone-card-title">5 Lakh · Mala</div>
+    <div class="mala-beads" id="malaBeads"></div>
+    <span class="milestone-count" id="m500kCount">0</span>
+    <div class="milestone-sub" id="m500kSub">of 5,00,000</div>
+  </div>
+
+  <!-- 1M — Ring Gauge -->
+  <div class="milestone-card" id="m1m">
+    <div class="milestone-card-title">10 Lakh · Ring</div>
+    <div class="ring-wrap">
+      <svg class="ring-svg" viewBox="0 0 78 78">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#7c3aed"/>
+            <stop offset="100%" stop-color="#ffd700"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="39" cy="39" r="30"/>
+        <circle class="ring-fill" id="ringFill" cx="39" cy="39" r="30"/>
+      </svg>
+      <div class="ring-center">
+        <span class="ring-pct" id="ringPct">0%</span>
+        <span class="ring-label">done</span>
+      </div>
+    </div>
+    <span class="milestone-count" id="m1mCount">0</span>
+    <div class="milestone-sub" id="m1mSub">of 10,00,000</div>
+  </div>
+
+</div>
 
 <!-- History -->
 <div class="history-section">
@@ -991,6 +1156,7 @@ function updateGrandCard(liveTotalOverride) {
     const etaEl = document.getElementById('grandEta');
     if (totalDone >= GRAND_TARGET) {
         etaEl.innerHTML = `<span class="grand-eta-date">🎉 1 Crore Complete! Jai Radha!</span>`;
+        updateMilestones(totalDone);
         return;
     }
     if (avgPerDay < 1) {
@@ -1007,6 +1173,8 @@ function updateGrandCard(liveTotalOverride) {
         `~${avgLabel}/day avg<br>` +
         `<span class="grand-eta-date">${dateLabel}</span>` +
         `<span class="grand-eta-days"> · ${daysLeft.toLocaleString('en-IN')} days</span>`;
+
+    updateMilestones(totalDone);
 }
 
 // Returns oldest past-date with an unfulfilled manual target, or null
@@ -1564,8 +1732,98 @@ function resetAll() {
     updateBackfillBanner();
 }
 
+// ════════════════════════════════════════════════════════
+// MILESTONE TRACKERS  (500K mala beads · 1M ring gauge)
+// ════════════════════════════════════════════════════════
+const M500K = 500000;
+const M1M   = 1000000;
+const RING_CIRC = 2 * Math.PI * 30; // r=30 → ≈188.5
+
+function initMalaBeads() {
+    const c = document.getElementById('malaBeads');
+    if (!c || c.children.length) return;
+    for (let i = 0; i < 10; i++) {
+        const b = document.createElement('div');
+        b.className = 'bead';
+        b.id = 'bead-' + i;
+        c.appendChild(b);
+    }
+}
+
+function updateMilestones(total) {
+    const card500 = document.getElementById('m500k');
+    const card1m  = document.getElementById('m1m');
+    const row     = document.getElementById('milestoneRow');
+    if (!row) return;
+
+    // ── 500K mala beads ──
+    if (card500 && !card500.classList.contains('done')) {
+        const lit = Math.min(10, Math.floor((total / M500K) * 10));
+        document.getElementById('m500kCount').textContent =
+            Math.min(total, M500K).toLocaleString('en-IN');
+
+        for (let i = 0; i < 10; i++) {
+            const b = document.getElementById('bead-' + i);
+            if (!b) continue;
+            if (i < lit && !b.classList.contains('lit')) {
+                b.classList.add('lit', 'just-lit');
+                setTimeout(() => b.classList.remove('just-lit'), 450);
+            } else if (i >= lit) {
+                b.classList.remove('lit', 'just-lit');
+            }
+        }
+
+        if (total >= M500K) {
+            document.getElementById('m500kSub').textContent = '🎉 Jai Radha! 5 Lakh done!';
+            card500.style.borderColor = 'rgba(74,222,128,0.55)';
+            setTimeout(() => {
+                card500.classList.add('done');
+                card500.addEventListener('transitionend', () => { card500.style.display = 'none'; }, { once: true });
+            }, 2500);
+        } else {
+            document.getElementById('m500kSub').textContent =
+                (M500K - total).toLocaleString('en-IN') + ' to go';
+        }
+    }
+
+    // ── 1M ring gauge ──
+    if (card1m && !card1m.classList.contains('done')) {
+        const pct = Math.min(1, total / M1M);
+        const pctStr = pct < 0.01 ? (pct * 100).toFixed(2)
+                     : pct < 0.1  ? (pct * 100).toFixed(1)
+                     : Math.round(pct * 100);
+        document.getElementById('ringPct').textContent = pctStr + '%';
+        document.getElementById('m1mCount').textContent =
+            Math.min(total, M1M).toLocaleString('en-IN');
+        document.getElementById('ringFill').style.strokeDashoffset =
+            RING_CIRC * (1 - pct);
+
+        const rf = document.getElementById('ringFill');
+        if (pct > 0 && !rf.classList.contains('pulsing')) rf.classList.add('pulsing');
+
+        if (total >= M1M) {
+            document.getElementById('m1mSub').textContent = '🎉 Jai Radha! 10 Lakh done!';
+            card1m.style.borderColor = 'rgba(74,222,128,0.55)';
+            setTimeout(() => {
+                card1m.classList.add('done');
+                card1m.addEventListener('transitionend', () => { card1m.style.display = 'none'; }, { once: true });
+            }, 2500);
+        } else {
+            document.getElementById('m1mSub').textContent =
+                (M1M - total).toLocaleString('en-IN') + ' to go';
+        }
+    }
+
+    // hide row when both cards are gone
+    if (card500 && card1m &&
+        card500.classList.contains('done') && card1m.classList.contains('done')) {
+        row.style.display = 'none';
+    }
+}
+
 // Initialise cached grand total and paint the card on page load
 savedGrandTotal = Object.values(loadHistory()).reduce((a, b) => a + b, 0);
+initMalaBeads();
 updateGrandCard();
 // Show backfill banner on page load if a pending target already exists
 updateBackfillBanner();
