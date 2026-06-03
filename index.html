@@ -372,85 +372,86 @@
             right: 22px;
             top: 50%;
             transform: translateY(-50%);
-            width: 172px;
-            background: rgba(18, 4, 36, 0.88);
-            border: 1px solid rgba(255,215,0,0.18);
-            border-radius: 20px;
-            padding: 20px 14px 18px;
+            width: 280px;
+            background: rgba(18, 4, 36, 0.92);
+            border: 1px solid rgba(255,215,0,0.22);
+            border-radius: 24px;
+            padding: 28px 22px 24px;
             text-align: center;
             backdrop-filter: blur(20px);
-            box-shadow: 0 0 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+            box-shadow: 0 0 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
             z-index: 50;
         }
         .grand-title {
-            font-size: 0.52rem;
-            color: rgba(255,215,0,0.38);
+            font-size: 0.85rem;
+            color: rgba(255,215,0,0.5);
             letter-spacing: 3px;
             text-transform: uppercase;
-            margin-bottom: 12px;
+            margin-bottom: 18px;
             line-height: 1.7;
         }
         .grand-done-row {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 1px;
-            margin-bottom: 10px;
+            gap: 2px;
+            margin-bottom: 14px;
         }
         .grand-done-num {
-            font-size: 1.55rem;
+            font-size: 2.8rem;
             font-weight: 700;
             color: #ffd700;
             letter-spacing: 0.5px;
-            text-shadow: 0 0 24px rgba(255,215,0,0.4);
+            text-shadow: 0 0 30px rgba(255,215,0,0.5);
             line-height: 1.1;
         }
         .grand-of-label {
-            font-size: 0.6rem;
-            color: rgba(255,215,0,0.32);
-            margin-top: 2px;
+            font-size: 0.85rem;
+            color: rgba(255,215,0,0.4);
+            margin-top: 4px;
         }
         .grand-pct {
-            font-size: 0.65rem;
-            color: rgba(255,215,0,0.5);
-            margin-top: 1px;
+            font-size: 0.95rem;
+            color: rgba(255,215,0,0.6);
+            margin-top: 2px;
+            font-weight: 600;
         }
         .grand-bar-bg {
-            height: 3px;
+            height: 6px;
             background: rgba(255,255,255,0.07);
             border-radius: 99px;
             overflow: visible;
-            margin-bottom: 12px;
+            margin-bottom: 18px;
             position: relative;
         }
         .grand-bar-fill {
             height: 100%;
             background: linear-gradient(90deg, #7c3aed, #ffd700);
             border-radius: 99px;
-            min-width: 4px;
+            min-width: 6px;
             width: 0%;
             transition: width 0.8s ease;
-            box-shadow: 0 0 6px rgba(255,215,0,0.4);
+            box-shadow: 0 0 8px rgba(255,215,0,0.5);
         }
         .grand-eta {
-            font-size: 0.62rem;
-            color: rgba(255,255,255,0.25);
+            font-size: 0.88rem;
+            color: rgba(255,255,255,0.35);
             letter-spacing: 0.3px;
-            line-height: 1.85;
+            line-height: 2;
         }
         .grand-eta-date {
-            color: rgba(255,215,0,0.7);
-            font-weight: 600;
+            color: rgba(255,215,0,0.8);
+            font-weight: 700;
             display: block;
-            font-size: 0.68rem;
+            font-size: 1rem;
         }
         .grand-eta-days {
-            color: rgba(255,215,0,0.4);
+            color: rgba(255,215,0,0.5);
         }
         .grand-divider {
             border: none;
-            border-top: 1px solid rgba(255,215,0,0.08);
-            margin: 10px 0;
+            border-top: 1px solid rgba(255,215,0,0.1);
+            margin: 16px 0;
         }
 
         /* Mobile: slim strip pinned to bottom ─────────────── */
@@ -464,22 +465,22 @@
                 border-radius: 0;
                 border-left: none; border-right: none; border-bottom: none;
                 border-top: 1px solid rgba(255,215,0,0.15);
-                padding: 7px 16px 10px;
+                padding: 8px 16px 12px;
                 display: flex;
                 flex-direction: row;
                 align-items: center;
                 gap: 10px;
             }
             .grand-title    { display: none; }
-            .grand-done-row { flex-direction: row; align-items: baseline; gap: 5px; margin-bottom: 0; flex: 0 0 auto; }
-            .grand-done-num { font-size: 0.95rem; }
+            .grand-done-row { flex-direction: row; align-items: baseline; gap: 6px; margin-bottom: 0; flex: 0 0 auto; }
+            .grand-done-num { font-size: 1.15rem; }
             .grand-of-label { display: none; }
-            .grand-pct      { font-size: 0.62rem; margin-top: 0; }
-            .grand-bar-bg   { flex: 1; margin-bottom: 0; }
+            .grand-pct      { font-size: 0.72rem; margin-top: 0; font-weight: normal; }
+            .grand-bar-bg   { flex: 1; margin-bottom: 0; height: 4px; }
             .grand-divider  { display: none; }
-            .grand-eta      { flex: 0 0 auto; font-size: 0.6rem; text-align: right; line-height: 1.5; }
-            .grand-eta-date { display: inline; font-size: 0.6rem; }
-            body            { padding-bottom: 46px; }
+            .grand-eta      { flex: 0 0 auto; font-size: 0.68rem; text-align: right; line-height: 1.5; }
+            .grand-eta-date { display: inline; font-size: 0.68rem; }
+            body            { padding-bottom: 52px; }
         }
 
         .history-empty {
