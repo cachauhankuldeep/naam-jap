@@ -730,8 +730,8 @@
             flex-wrap: wrap;
         }
         .bead {
-            width: 20px;
-            height: 20px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             background: rgba(255,255,255,0.07);
             border: 1px solid rgba(255,215,0,0.12);
@@ -802,6 +802,14 @@
             50%      { filter: drop-shadow(0 0 12px rgba(255,215,0,0.9)); }
         }
         .ring-fill.pulsing { animation: ringPulse 1.6s ease-in-out infinite; }
+
+        /* Mobile: stack milestone cards vertically, each full width */
+        @media (max-width: 520px) {
+            .milestone-row { flex-direction: column; gap: 10px; }
+            .milestone-card { padding: 12px 16px 11px; }
+            .mala-beads { gap: 8px; }
+            .bead { width: 32px; height: 32px; }
+        }
     </style>
 </head>
 <body>
@@ -917,6 +925,7 @@
     <div class="mala-beads" id="malaBeads"></div>
     <span class="milestone-count" id="m500kCount">0</span>
     <div class="milestone-sub" id="m500kSub">of 5,00,000</div>
+    <div class="milestone-sub" style="opacity:0.4;margin-top:3px;">● = 1 lakh</div>
   </div>
 
   <!-- 1M — Ring Gauge -->
@@ -1742,7 +1751,7 @@ const RING_CIRC = 2 * Math.PI * 30; // r=30 → ≈188.5
 function initMalaBeads() {
     const c = document.getElementById('malaBeads');
     if (!c || c.children.length) return;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 5; i++) {
         const b = document.createElement('div');
         b.className = 'bead';
         b.id = 'bead-' + i;
@@ -1758,11 +1767,11 @@ function updateMilestones(total) {
 
     // ── 500K mala beads ──
     if (card500 && !card500.classList.contains('done')) {
-        const lit = Math.min(10, Math.floor((total / M500K) * 10));
+        const lit = Math.min(5, Math.floor((total / M500K) * 5));
         document.getElementById('m500kCount').textContent =
             Math.min(total, M500K).toLocaleString('en-IN');
 
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 5; i++) {
             const b = document.getElementById('bead-' + i);
             if (!b) continue;
             if (i < lit && !b.classList.contains('lit')) {
