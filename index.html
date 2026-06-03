@@ -674,13 +674,16 @@
         .autosave-status.ok  { color: #4ade80; }
         .autosave-status.warn{ color: #f59e0b; }
 
-        /* ── Milestone trackers (500K + 1M) ── */
-        .milestone-row {
+        /* ── Milestone trackers (500K + 1M) — left sticky column ── */
+        .milestone-col {
+            flex: 0 0 160px;
+            width: 160px;
             display: flex;
-            gap: 12px;
-            width: 100%;
-            max-width: 380px;
-            margin-bottom: 24px;
+            flex-direction: column;
+            gap: 14px;
+            position: sticky;
+            top: 32px;
+            align-self: flex-start;
         }
         .milestone-card {
             flex: 1;
@@ -803,12 +806,21 @@
         }
         .ring-fill.pulsing { animation: ringPulse 1.6s ease-in-out infinite; }
 
-        /* Mobile: stack milestone cards vertically, each full width */
+        /* Mobile: milestone col becomes a horizontal strip above main content */
+        @media (max-width: 900px) {
+            .milestone-col {
+                flex: none;
+                width: 100%;
+                flex-direction: row;
+                position: static;
+                gap: 12px;
+            }
+            .milestone-card { flex: 1; }
+            .bead { width: 24px; height: 24px; }
+        }
         @media (max-width: 520px) {
-            .milestone-row { flex-direction: column; gap: 10px; }
-            .milestone-card { padding: 12px 16px 11px; }
-            .mala-beads { gap: 8px; }
-            .bead { width: 32px; height: 32px; }
+            .milestone-col { flex-direction: column; }
+            .bead { width: 28px; height: 28px; }
         }
     </style>
 </head>
@@ -858,7 +870,44 @@
 
 <div class="page-cols">
 
-<!-- ── Left column: main app ── -->
+<!-- ── Far-left column: milestone trackers ── -->
+<div class="milestone-col" id="milestoneCol">
+
+  <!-- 500K — Mala Beads -->
+  <div class="milestone-card" id="m500k">
+    <div class="milestone-card-title">5 Lakh · Mala</div>
+    <div class="mala-beads" id="malaBeads"></div>
+    <span class="milestone-count" id="m500kCount">0</span>
+    <div class="milestone-sub" id="m500kSub">of 5,00,000</div>
+    <div class="milestone-sub" style="opacity:0.4;margin-top:3px;">● = 1 lakh</div>
+  </div>
+
+  <!-- 1M — Ring Gauge -->
+  <div class="milestone-card" id="m1m">
+    <div class="milestone-card-title">10 Lakh · Ring</div>
+    <div class="ring-wrap">
+      <svg class="ring-svg" viewBox="0 0 78 78">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#7c3aed"/>
+            <stop offset="100%" stop-color="#ffd700"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="39" cy="39" r="30"/>
+        <circle class="ring-fill" id="ringFill" cx="39" cy="39" r="30"/>
+      </svg>
+      <div class="ring-center">
+        <span class="ring-pct" id="ringPct">0%</span>
+        <span class="ring-label">done</span>
+      </div>
+    </div>
+    <span class="milestone-count" id="m1mCount">0</span>
+    <div class="milestone-sub" id="m1mSub">of 10,00,000</div>
+  </div>
+
+</div>
+
+<!-- ── Center column: main app ── -->
 <div class="main-col">
 
 <div class="deity-name">राधा</div>
@@ -915,43 +964,6 @@
 </div>
 
 <div class="stats" id="stats"></div>
-
-<!-- Milestone trackers: 500K (mala beads) + 1M (ring gauge) -->
-<div class="milestone-row" id="milestoneRow">
-
-  <!-- 500K — Mala Beads -->
-  <div class="milestone-card" id="m500k">
-    <div class="milestone-card-title">5 Lakh · Mala</div>
-    <div class="mala-beads" id="malaBeads"></div>
-    <span class="milestone-count" id="m500kCount">0</span>
-    <div class="milestone-sub" id="m500kSub">of 5,00,000</div>
-    <div class="milestone-sub" style="opacity:0.4;margin-top:3px;">● = 1 lakh</div>
-  </div>
-
-  <!-- 1M — Ring Gauge -->
-  <div class="milestone-card" id="m1m">
-    <div class="milestone-card-title">10 Lakh · Ring</div>
-    <div class="ring-wrap">
-      <svg class="ring-svg" viewBox="0 0 78 78">
-        <defs>
-          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#7c3aed"/>
-            <stop offset="100%" stop-color="#ffd700"/>
-          </linearGradient>
-        </defs>
-        <circle class="ring-bg" cx="39" cy="39" r="30"/>
-        <circle class="ring-fill" id="ringFill" cx="39" cy="39" r="30"/>
-      </svg>
-      <div class="ring-center">
-        <span class="ring-pct" id="ringPct">0%</span>
-        <span class="ring-label">done</span>
-      </div>
-    </div>
-    <span class="milestone-count" id="m1mCount">0</span>
-    <div class="milestone-sub" id="m1mSub">of 10,00,000</div>
-  </div>
-
-</div>
 
 <!-- History -->
 <div class="history-section">
@@ -1762,7 +1774,7 @@ function initMalaBeads() {
 function updateMilestones(total) {
     const card500 = document.getElementById('m500k');
     const card1m  = document.getElementById('m1m');
-    const row     = document.getElementById('milestoneRow');
+    const row     = document.getElementById('milestoneCol');
     if (!row) return;
 
     // ── 500K mala beads ──
