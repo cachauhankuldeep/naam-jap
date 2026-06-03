@@ -366,84 +366,100 @@
             line-height: 1.5;
         }
 
-        /* ── Maha Lakshya — fixed right-side panel (desktop) ── */
+        /* ── Two-column page layout ── */
+        .page-cols {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-start;
+            width: 100%;
+            max-width: 1160px;
+            gap: 36px;
+        }
+        .main-col {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* ── Maha Lakshya — right column panel (desktop) ── */
         .grand-card {
-            position: fixed;
-            right: 22px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 280px;
+            flex: 0 0 420px;
+            width: 420px;
+            position: sticky;
+            top: 32px;
+            align-self: flex-start;
             background: rgba(18, 4, 36, 0.92);
             border: 1px solid rgba(255,215,0,0.22);
-            border-radius: 24px;
-            padding: 28px 22px 24px;
+            border-radius: 28px;
+            padding: 40px 32px 36px;
             text-align: center;
             backdrop-filter: blur(20px);
-            box-shadow: 0 0 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.05);
-            z-index: 50;
+            box-shadow: 0 0 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
         }
         .grand-title {
-            font-size: 0.85rem;
-            color: rgba(255,215,0,0.5);
-            letter-spacing: 3px;
+            font-size: 1.1rem;
+            color: rgba(255,215,0,0.55);
+            letter-spacing: 4px;
             text-transform: uppercase;
-            margin-bottom: 18px;
-            line-height: 1.7;
+            margin-bottom: 24px;
+            line-height: 1.9;
         }
         .grand-done-row {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
-            margin-bottom: 14px;
+            gap: 4px;
+            margin-bottom: 18px;
         }
         .grand-done-num {
-            font-size: 2.8rem;
+            font-size: 5rem;
             font-weight: 700;
             color: #ffd700;
             letter-spacing: 0.5px;
-            text-shadow: 0 0 30px rgba(255,215,0,0.5);
-            line-height: 1.1;
+            text-shadow: 0 0 40px rgba(255,215,0,0.55);
+            line-height: 1.05;
         }
         .grand-of-label {
-            font-size: 0.85rem;
-            color: rgba(255,215,0,0.4);
-            margin-top: 4px;
+            font-size: 1.1rem;
+            color: rgba(255,215,0,0.45);
+            margin-top: 6px;
         }
         .grand-pct {
-            font-size: 0.95rem;
-            color: rgba(255,215,0,0.6);
-            margin-top: 2px;
+            font-size: 1.3rem;
+            color: rgba(255,215,0,0.65);
+            margin-top: 4px;
             font-weight: 600;
         }
         .grand-bar-bg {
-            height: 6px;
+            height: 10px;
             background: rgba(255,255,255,0.07);
             border-radius: 99px;
             overflow: visible;
-            margin-bottom: 18px;
+            margin-bottom: 24px;
             position: relative;
         }
         .grand-bar-fill {
             height: 100%;
             background: linear-gradient(90deg, #7c3aed, #ffd700);
             border-radius: 99px;
-            min-width: 6px;
+            min-width: 8px;
             width: 0%;
             transition: width 0.8s ease;
-            box-shadow: 0 0 8px rgba(255,215,0,0.5);
+            box-shadow: 0 0 12px rgba(255,215,0,0.5);
         }
         .grand-eta {
-            font-size: 0.88rem;
-            color: rgba(255,255,255,0.35);
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.4);
             letter-spacing: 0.3px;
-            line-height: 2;
+            line-height: 2.2;
         }
         .grand-eta-date {
-            color: rgba(255,215,0,0.8);
+            color: rgba(255,215,0,0.85);
             font-weight: 700;
             display: block;
-            font-size: 1rem;
+            font-size: 1.45rem;
         }
         .grand-eta-days {
             color: rgba(255,215,0,0.5);
@@ -451,16 +467,18 @@
         .grand-divider {
             border: none;
             border-top: 1px solid rgba(255,215,0,0.1);
-            margin: 16px 0;
+            margin: 22px 0;
         }
 
         /* Mobile: slim strip pinned to bottom ─────────────── */
-        @media (max-width: 760px) {
+        @media (max-width: 900px) {
+            .page-cols { flex-direction: column; align-items: center; }
             .grand-card {
                 position: fixed;
                 right: auto; left: 0;
                 top: auto;   bottom: 0;
                 transform: none;
+                flex: none;
                 width: 100%;
                 border-radius: 0;
                 border-left: none; border-right: none; border-bottom: none;
@@ -470,6 +488,7 @@
                 flex-direction: row;
                 align-items: center;
                 gap: 10px;
+                backdrop-filter: blur(12px);
             }
             .grand-title    { display: none; }
             .grand-done-row { flex-direction: row; align-items: baseline; gap: 6px; margin-bottom: 0; flex: 0 0 auto; }
@@ -700,6 +719,11 @@
 <input type="file" id="restoreFileInput" accept=".json" style="display:none"
        onchange="handleRestoreFileInput(this)">
 
+<div class="page-cols">
+
+<!-- ── Left column: main app ── -->
+<div class="main-col">
+
 <div class="deity-name">राधा</div>
 <div class="subtitle">Naam Jap Counter</div>
 
@@ -708,21 +732,6 @@
     <div class="count-label">Radha Count</div>
     <div class="count-number" id="countDisplay">0</div>
     <div class="count-of-target" id="countOfTarget"></div>
-</div>
-
-<!-- Maha Lakshya — fixed right panel / mobile bottom strip -->
-<div class="grand-card" id="grandCard">
-    <div class="grand-title">Maha<br>Lakshya<br>1 Crore</div>
-    <div class="grand-done-row">
-        <span class="grand-done-num" id="grandDoneNum">0</span>
-        <span class="grand-of-label">of 1,00,00,000</span>
-        <span class="grand-pct" id="grandPct">(0%)</span>
-    </div>
-    <div class="grand-bar-bg">
-        <div class="grand-bar-fill" id="grandBarFill"></div>
-    </div>
-    <hr class="grand-divider">
-    <div class="grand-eta" id="grandEta">—</div>
 </div>
 
 <!-- Progress bar -->
@@ -790,6 +799,25 @@
 
 <div class="error-box" id="errorBox"></div>
 <div id="debugBox" style="margin-top:10px;font-size:0.7rem;color:rgba(255,200,0,0.5);text-align:center;"></div>
+
+</div><!-- /main-col -->
+
+<!-- ── Right column: Maha Lakshya ── -->
+<div class="grand-card" id="grandCard">
+    <div class="grand-title">Maha<br>Lakshya<br>1 Crore</div>
+    <div class="grand-done-row">
+        <span class="grand-done-num" id="grandDoneNum">0</span>
+        <span class="grand-of-label">of 1,00,00,000</span>
+        <span class="grand-pct" id="grandPct">(0%)</span>
+    </div>
+    <div class="grand-bar-bg">
+        <div class="grand-bar-fill" id="grandBarFill"></div>
+    </div>
+    <hr class="grand-divider">
+    <div class="grand-eta" id="grandEta">—</div>
+</div><!-- /grand-card -->
+
+</div><!-- /page-cols -->
 
 <script>
 // ════════════════════════════════════════════════════════
