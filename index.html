@@ -782,6 +782,7 @@
 <div class="history-section" style="margin-top:10px;">
     <div class="autosave-row">
         <button class="btn-autosave" id="autoSaveBtn" onclick="setupAutoSave()">💾 Set Auto-Save File</button>
+        <button class="btn-autosave" onclick="pickAndRestoreFile()" title="Restore data from your backup JSON file">📂 Restore from Backup</button>
         <span class="autosave-status" id="autoSaveStatus">Not set up — data only saved in browser</span>
     </div>
 </div>
@@ -1584,14 +1585,25 @@ async function processRestoreData(file) {
             alert('This file has no chanting data.\nPlease pick your naam_jap_backup.json file.');
             return;
         }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.history));
-        if (data.targets) localStorage.setItem(TARGETS_KEY, JSON.stringify(data.targets));
-        savedGrandTotal = Object.values(data.history).reduce((a,b)=>a+b,0);
+        // Merge: keep whichever count is higher per date (protects new counts)
+        const existing = loadHistory();
+        const merged   = Object.assign({}, data.history);
+        for (const dk of Object.keys(existing)) {
+            if ((existing[dk] || 0) > (merged[dk] || 0)) merged[dk] = existing[dk];
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        if (data.targets) {
+            const existT = loadTargets();
+            const mergedT = Object.assign({}, data.targets, existT);
+            localStorage.setItem(TARGETS_KEY, JSON.stringify(mergedT));
+        }
+        savedGrandTotal = Object.values(merged).reduce((a,b)=>a+b,0);
         updateGrandCard();
         updateBackfillBanner();
         if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
         document.getElementById('restoreModal').classList.remove('show');
         setSaveStatus('✓ Data restored! Click 💾 to re-enable auto-save', 'warn');
+        alert('✅ Data restored successfully!\n\nTotal chants: ' + savedGrandTotal.toLocaleString('en-IN') + '\n\nNow click 💾 Set Auto-Save File to re-enable auto-saving.');
     } catch {
         alert('Could not read the file.\nPlease pick your naam_jap_backup.json backup file.');
     }
