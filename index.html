@@ -1388,12 +1388,14 @@ function toggleMonth(mk) {
 
 // ════════════════════════════════════════════════════════
 // PLATFORM DETECTION
-// hasSR  — browser has Web Speech API (desktop Chrome, iOS Safari, Android Chrome)
-// isMobile — phone/tablet (needs proactive SR reset to beat repetition blindness)
-// No hasSR → Chrome on iOS (CriOS) → must use burst detection
+// hasSR    — browser has Web Speech API
+// isMobile — phone/tablet
+// useSR    — true ONLY on desktop; mobile always uses VAD (zero-lag local audio onset detection)
+//            SR on mobile has 0.5-2s cloud round-trip lag that cannot be eliminated any other way
 // ════════════════════════════════════════════════════════
 const hasSR    = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 const isMobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent) && !window.MSStream;
+const useSR    = hasSR && !isMobile;   // desktop Chrome only
 
 // ════════════════════════════════════════════════════════
 // SPEECH RECOGNITION
@@ -1503,10 +1505,19 @@ function buildRecognition() {
 }
 
 // ════════════════════════════════════════════════════════
-// MOBILE AUDIO BURST DETECTION
-// Bypasses speech APIs (repetition blindness on all platforms).
-// Auto-calibrates thresholds to the user's mic + room on each Start.
-// Uses requestAnimationFrame — more reliable than setInterval on mobile.
+// MOBILE AUDIO BURST DETECTION  (all mobile — iOS Safari + CriOS + Android)
+//
+// Why VAD instead of Speech Recognition on mobile:
+//   SR sends audio to cloud servers → 0.5–2s round-trip lag, unavoidable.
+//   VAD runs fully local → detects voice onset in <50ms.
+//
+// Algorithm:
+//   • Maintains a live ambient noise baseline (exponential moving average).
+//     Updates only during silence so chanting never inflates the floor.
+//   • No forced "stay silent" calibration period — starts counting immediately.
+//   • Threshold = 5× ambient floor (floors at 0.006 so very quiet mics still work).
+//   • 20-frame warm-up (~0.3s) ignores the button-tap thud at session start.
+//   • Hysteresis: entry threshold > exit threshold prevents jitter on trailing edge.
 // ════════════════════════════════════════════════════════
 let burstCtx        = null;
 let burstTimer      = null;
@@ -1514,12 +1525,11 @@ let smoothRMS       = 0;
 let inSpeech        = false;
 let speechEntryTime = 0;
 let lastCountTime   = 0;
-let dynHigh         = 0.006; // set dynamically during calibration
-let dynLow          = 0.002;
+let dynHigh         = 0.006;
+let dynLow          = 0.003;
 
-const MAX_SPEECH_MS = 300;  // force-exit after 300ms — handles fast continuous chanting
-const MIN_ONSET_GAP = 150;  // min ms between counts
-const CALIB_MS      = 1500; // calibration window
+const MAX_SPEECH_MS = 350;   // force-exit after 350ms (handles sustained chanting)
+const MIN_ONSET_GAP = 180;   // min ms between counts (prevents double-fire)
 
 function startBurstDetection(stream, actx) {
     burstCtx = actx;
@@ -1529,7 +1539,7 @@ function startBurstDetection(stream, actx) {
     const analyser = burstCtx.createAnalyser();
     analyser.fftSize = 256;
 
-    // iOS Safari requires the graph to reach destination or analyser gets no data
+    // iOS/Android requires the audio graph to reach destination or it won't run
     const mute = burstCtx.createGain();
     mute.gain.value = 0;
     source.connect(analyser);
@@ -1539,18 +1549,18 @@ function startBurstDetection(stream, actx) {
     const buf = new Uint8Array(analyser.frequencyBinCount);
     smoothRMS = 0; inSpeech = false; speechEntryTime = 0; lastCountTime = 0;
 
-    // Calibration phase: measure ambient noise floor for CALIB_MS ms,
-    // then set thresholds well above it so only speech triggers a count
-    let calibrating   = true;
-    let calibSamples  = [];
-    const calibStart  = Date.now();
-    document.getElementById('statusText').textContent = 'Calibrating mic…';
+    // Adaptive ambient baseline — seeds from first frame, then updates slowly
+    // during non-speech frames so it tracks room noise without user action.
+    let ambientEMA  = -1;        // -1 = uninitialized
+    let frameCount  = 0;
+    const WARMUP    = 25;        // ~0.4s at 60fps — absorbs button-tap thud
+    const AMB_ALPHA = 0.012;     // ambient update speed: ~1.2% per frame
+
+    document.getElementById('statusText').textContent = 'सुन रहा हूँ…';
 
     function tick() {
-        if (!burstCtx) return; // stopped externally
-
-        // Resume if iOS suspended the context mid-session
-        if (burstCtx.state === 'suspended') burstCtx.resume();
+        if (!burstCtx) return;
+        if (burstCtx.state === 'suspended') { burstCtx.resume(); }
 
         analyser.getByteTimeDomainData(buf);
         let sum = 0;
@@ -1558,40 +1568,44 @@ function startBurstDetection(stream, actx) {
         const rms = Math.sqrt(sum / buf.length);
         const now = Date.now();
 
+        // Level bar visual
         const bar = document.getElementById('levelBar');
-        if (bar) bar.style.width = Math.min(100, rms * 600) + '%';
+        if (bar) bar.style.width = Math.min(100, rms * 500) + '%';
 
-        // Wait for AudioContext to be running — Chrome on iOS can take a few frames
+        // Wait for AudioContext — CriOS can take a few frames to resume
         if (burstCtx.state !== 'running') {
             burstCtx.resume();
             burstTimer = requestAnimationFrame(tick);
             return;
         }
 
-        if (calibrating) {
-            calibSamples.push(rms);
-            if (now - calibStart >= CALIB_MS) {
-                calibrating = false;
-                const avg = calibSamples.reduce((a, b) => a + b, 0) / calibSamples.length;
-                // High threshold: 3× above noise floor, clamped between 0.003 and 0.015
-                // Lower multiplier = more sensitive, catches quieter voices
-                dynHigh = Math.max(0.003, Math.min(0.015, avg * 3 + 0.002));
-                dynLow  = dynHigh * 0.35;
-                document.getElementById('statusText').textContent = 'सुन रहा हूँ…';
+        frameCount++;
+
+        // Seed ambient on very first real frame
+        if (ambientEMA < 0) ambientEMA = rms;
+
+        smoothRMS = smoothRMS * 0.4 + rms * 0.6;
+
+        // Recompute thresholds live from ambient floor
+        dynHigh = Math.max(0.006, ambientEMA * 5);
+        dynLow  = Math.max(0.003, ambientEMA * 2.2);
+
+        if (!inSpeech) {
+            // Update ambient ONLY when clearly silent (below half the trigger threshold)
+            // This prevents chanting from gradually raising the noise floor
+            if (smoothRMS < dynHigh * 0.45) {
+                ambientEMA = ambientEMA * (1 - AMB_ALPHA) + rms * AMB_ALPHA;
             }
-            burstTimer = requestAnimationFrame(tick);
-            return;
-        }
 
-        smoothRMS = smoothRMS * 0.35 + rms * 0.65;
-
-        if (!inSpeech && smoothRMS > dynHigh && (now - lastCountTime) > MIN_ONSET_GAP) {
-            inSpeech        = true;
-            speechEntryTime = now;
-            addCount(1);
-            lastCountTime = now;
-            setTranscript(highlight('राधा'), false);
-        } else if (inSpeech) {
+            // Count: past warm-up, above threshold, past min gap
+            if (frameCount > WARMUP && smoothRMS > dynHigh && (now - lastCountTime) > MIN_ONSET_GAP) {
+                inSpeech        = true;
+                speechEntryTime = now;
+                addCount(1);
+                lastCountTime   = now;
+                setTranscript(highlight('राधा'), false);
+            }
+        } else {
             if (smoothRMS < dynLow || (now - speechEntryTime) > MAX_SPEECH_MS) {
                 inSpeech = false;
             }
@@ -1676,16 +1690,16 @@ function startListening() {
     listenStartTime = Date.now();
     if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
 
-    if (hasSR) {
-        // Speech recognition — desktop Chrome + iOS Safari + Android Chrome
+    if (useSR) {
+        // Desktop Chrome only: Speech Recognition (accurate word matching, no lag on fast hardware)
         srCycleCount = 0;
         if (!recognition) recognition = buildRecognition();
         if (!recognition) { isListening = false; showError('Speech recognition not supported. Use Google Chrome on desktop.'); return; }
         try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
     } else {
-        // Burst detection — Chrome on iOS (CriOS has no Web Speech API)
-        // AudioContext MUST be created AND resumed synchronously inside the tap handler.
-        // CriOS will not resume it from inside a Promise .then() callback.
+        // ALL mobile (iOS Safari, CriOS, Android Chrome): VAD burst detection
+        // Counts voice onsets locally in <50ms — no cloud round-trip, no lag.
+        // AudioContext MUST be created AND resumed synchronously in the tap handler.
         setUI(true);
         const actx = new (window.AudioContext || window.webkitAudioContext)();
         actx.resume();
@@ -1713,7 +1727,7 @@ function stopListening() {
     permPending = false;
     if (permRetryInterval) { clearInterval(permRetryInterval); permRetryInterval = null; }
     document.getElementById('permModal').classList.remove('show');
-    if (!hasSR) stopBurstDetection();
+    if (!useSR) stopBurstDetection();
     else if (recognition) try { recognition.stop(); } catch(_) {}
     // iOS: keep micStream alive — releasing it triggers a new permission dialog next time
     if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
