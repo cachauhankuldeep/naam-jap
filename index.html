@@ -1507,36 +1507,33 @@ function buildRecognition() {
 // ════════════════════════════════════════════════════════
 // MOBILE VOICE ONSET DETECTION  (all mobile — iOS Safari + CriOS + Android)
 //
-// WHY ONSET DETECTION (not threshold detection):
-//   Threshold-based ("is volume > X?") fails because mic sensitivity,
-//   room noise, and iOS audio processing vary wildly across devices.
-//   There is no single X that works everywhere.
+// TWO-STATE MACHINE with frozen ambient baseline:
 //
-//   Onset detection ("did volume suddenly JUMP from what it was?") works
-//   everywhere because it's a ratio, not an absolute value:
-//     • Background noise (fan, TV, traffic) is always ~same level → ratio ≈ 1 → no count
-//     • A voice onset spikes sharply above recent background → ratio = 3-8 → count
-//   No calibration. No silence required. Works on any mic, any room.
+//   fastEMA (α=0.75) — responds to a sound within 1-2 frames (~30ms)
+//   slowEMA (α=0.15) — the ambient noise floor
 //
-// ALGORITHM — fast/slow EMA ratio:
-//   fastEMA  tracks the last ~2 frames (α=0.75) — responds instantly to voice
-//   slowEMA  tracks the last ~8 frames (α=0.15) — represents recent background
-//   onset when: fastEMA / slowEMA > RISE_RATIO  AND  fastEMA > MIN_ABS
+//   IDLE:   slowEMA updates freely (learns room)
+//           count fires when fastEMA/slowEMA > RISE_RATIO (sudden energy jump)
+//           → re-arm immediately after chant ends
 //
-//   30-frame warm-up lets slowEMA learn room level before counting starts.
-//   MAX_SPEECH_MS prevents one utterance from counting as multiple.
-//   MIN_ONSET_GAP enforces minimum time between successive counts.
+//   ACTIVE: slowEMA is FROZEN at ambient
+//           This is the fix for under-counting at fast pace:
+//           If slowEMA were allowed to rise during chanting, the ratio for the
+//           next chant would be lower → missed counts → appeared as lag.
+//           Frozen slowEMA = every chant detects at the same clean ratio.
+//           Exits when fastEMA falls back to FALL_RATIO × slowEMA (chant ended).
+//
+//   No calibration. No silence required. Works on any mic/room/iOS version.
 // ════════════════════════════════════════════════════════
-let burstCtx        = null;
-let burstTimer      = null;
-let inSpeech        = false;
-let speechEntryTime = 0;
-let lastCountTime   = 0;
+let burstCtx      = null;
+let burstTimer    = null;
+let lastCountTime = 0;
 
-const RISE_RATIO    = 2.5;   // fast must be 2.5× slow to count (raise if over-counting)
-const MIN_ABS       = 0.007; // absolute floor — rules out digital noise hiss
-const MAX_SPEECH_MS = 400;   // max duration of one utterance before re-arm
-const MIN_ONSET_GAP = 220;   // min ms between counts (prevents double-fire on one chant)
+const RISE_RATIO    = 2.0;   // fastEMA must be 2× ambient to fire (lower = more sensitive)
+const FALL_RATIO    = 1.5;   // fastEMA must drop to 1.5× ambient to re-arm
+const MIN_ABS       = 0.005; // absolute floor — ignores digital hiss on silent mics
+const MAX_SPEECH_MS = 500;   // safety: force re-arm after 500ms (stuck-state guard)
+const MIN_ONSET_GAP = 150;   // min ms between counts
 
 function startBurstDetection(stream, actx) {
     burstCtx = actx;
@@ -1546,7 +1543,7 @@ function startBurstDetection(stream, actx) {
     const analyser = burstCtx.createAnalyser();
     analyser.fftSize = 256;
 
-    // iOS/Android: audio graph must reach destination or it won't process
+    // iOS/Android: graph must reach destination or audio engine won't run
     const mute = burstCtx.createGain();
     mute.gain.value = 0;
     source.connect(analyser);
@@ -1554,12 +1551,14 @@ function startBurstDetection(stream, actx) {
     mute.connect(burstCtx.destination);
 
     const buf = new Uint8Array(analyser.frequencyBinCount);
-    inSpeech = false; speechEntryTime = 0; lastCountTime = 0;
+    lastCountTime = 0;
 
-    let fastEMA    = 0;   // fast energy (α=0.75, ~2 frames)
-    let slowEMA    = 0;   // slow energy (α=0.15, ~7 frames = ~0.1s at 60fps)
-    let frameCount = 0;
-    const WARMUP   = 30;  // frames before counting — ~0.5s to let slowEMA seed
+    let fastEMA     = 0;
+    let slowEMA     = 0;
+    let state       = 'IDLE';  // 'IDLE' | 'ACTIVE'
+    let speechEntry = 0;
+    let frameCount  = 0;
+    const WARMUP    = 30;      // ~0.5s at 60fps: absorbs tap sound, seeds slowEMA
 
     document.getElementById('statusText').textContent = 'सुन रहा हूँ…';
 
@@ -1583,27 +1582,27 @@ function startBurstDetection(stream, actx) {
         }
 
         frameCount++;
-        fastEMA = fastEMA * 0.25 + rms * 0.75;
-        slowEMA = slowEMA * 0.85 + rms * 0.15;
+        fastEMA = fastEMA * 0.25 + rms * 0.75;   // α = 0.75 — fast
 
-        // ratio: how much louder is right now vs recent background
-        const ratio = (slowEMA > 0.0005) ? fastEMA / slowEMA : 1;
+        if (state === 'IDLE') {
+            slowEMA = slowEMA * 0.85 + rms * 0.15; // α = 0.15 — slow ambient tracker
+            const ratio = slowEMA > 0.0005 ? fastEMA / slowEMA : 1;
 
-        if (!inSpeech) {
             if (frameCount > WARMUP &&
                 ratio > RISE_RATIO &&
                 fastEMA > MIN_ABS &&
                 (now - lastCountTime) > MIN_ONSET_GAP) {
 
-                inSpeech        = true;
-                speechEntryTime = now;
+                state       = 'ACTIVE';
+                speechEntry = now;
                 addCount(1);
-                lastCountTime   = now;
+                lastCountTime = now;
                 setTranscript(highlight('राधा'), false);
             }
-        } else {
-            if (now - speechEntryTime > MAX_SPEECH_MS) {
-                inSpeech = false;
+
+        } else { // ACTIVE — slowEMA frozen, so next chant always fires cleanly
+            if (fastEMA < slowEMA * FALL_RATIO || (now - speechEntry) > MAX_SPEECH_MS) {
+                state = 'IDLE';
             }
         }
 
@@ -1616,7 +1615,6 @@ function startBurstDetection(stream, actx) {
 function stopBurstDetection() {
     if (burstTimer) { cancelAnimationFrame(burstTimer); burstTimer = null; }
     if (burstCtx)   { burstCtx.close(); burstCtx = null; }
-    inSpeech = false;
     const bar = document.getElementById('levelBar');
     if (bar) bar.style.width = '0%';
 }
