@@ -1529,10 +1529,10 @@ let burstCtx      = null;
 let burstTimer    = null;
 let lastCountTime = 0;
 
-const RISE_RATIO    = 2.0;   // fastEMA must be 2× ambient to fire (lower = more sensitive)
-const FALL_RATIO    = 1.5;   // fastEMA must drop to 1.5× ambient to re-arm
-const MIN_ABS       = 0.005; // absolute floor — ignores digital hiss on silent mics
-const MAX_SPEECH_MS = 500;   // safety: force re-arm after 500ms (stuck-state guard)
+const RISE_RATIO    = 1.8;   // fastEMA must be 1.8× ambient (lower = more sensitive)
+const FALL_RATIO    = 1.4;   // re-arm when fastEMA drops to 1.4× ambient
+const MIN_ABS       = 0.003; // absolute floor — very low so any mic works
+const MAX_SPEECH_MS = 500;   // safety: force re-arm after 500ms
 const MIN_ONSET_GAP = 150;   // min ms between counts
 
 function startBurstDetection(stream, actx) {
@@ -1551,20 +1551,24 @@ function startBurstDetection(stream, actx) {
     mute.connect(burstCtx.destination);
 
     const buf = new Uint8Array(analyser.frequencyBinCount);
-    lastCountTime = 0;
+
+    // Time-based startup grace instead of frame counting —
+    // avoids the bug where suspended AudioContext froze frameCount at 0
+    lastCountTime = Date.now() + 400; // no counts for first 400ms (absorbs tap thud)
 
     let fastEMA     = 0;
     let slowEMA     = 0;
-    let state       = 'IDLE';  // 'IDLE' | 'ACTIVE'
+    let state       = 'IDLE';
     let speechEntry = 0;
-    let frameCount  = 0;
-    const WARMUP    = 30;      // ~0.5s at 60fps: absorbs tap sound, seeds slowEMA
 
     document.getElementById('statusText').textContent = 'सुन रहा हूँ…';
 
     function tick() {
         if (!burstCtx) return;
-        if (burstCtx.state === 'suspended') burstCtx.resume();
+
+        // Always attempt resume — never bail with early return
+        // (early return was preventing count when iOS kept context suspended)
+        if (burstCtx.state !== 'running') burstCtx.resume();
 
         analyser.getByteTimeDomainData(buf);
         let sum = 0;
@@ -1573,26 +1577,20 @@ function startBurstDetection(stream, actx) {
         const now = Date.now();
 
         const bar = document.getElementById('levelBar');
-        if (bar) bar.style.width = Math.min(100, rms * 500) + '%';
+        if (bar) bar.style.width = Math.min(100, rms * 600) + '%';
 
-        if (burstCtx.state !== 'running') {
-            burstCtx.resume();
-            burstTimer = requestAnimationFrame(tick);
-            return;
-        }
-
-        frameCount++;
-        fastEMA = fastEMA * 0.25 + rms * 0.75;   // α = 0.75 — fast
+        fastEMA = fastEMA * 0.25 + rms * 0.75;
 
         if (state === 'IDLE') {
-            slowEMA = slowEMA * 0.85 + rms * 0.15; // α = 0.15 — slow ambient tracker
-            const ratio = slowEMA > 0.0005 ? fastEMA / slowEMA : 1;
+            slowEMA = slowEMA * 0.85 + rms * 0.15;
+            const ratio = slowEMA > 0.001 ? fastEMA / slowEMA : 1;
 
-            if (frameCount > WARMUP &&
-                ratio > RISE_RATIO &&
-                fastEMA > MIN_ABS &&
-                (now - lastCountTime) > MIN_ONSET_GAP) {
+            // Debug — visible in the debug box below the app
+            const dbg = document.getElementById('debugBox');
+            if (dbg) dbg.textContent =
+                `rms ${rms.toFixed(4)}  fast ${fastEMA.toFixed(4)}  slow ${slowEMA.toFixed(4)}  ratio ${ratio.toFixed(2)}  ctx:${burstCtx ? burstCtx.state : '—'}`;
 
+            if (ratio > RISE_RATIO && fastEMA > MIN_ABS && (now - lastCountTime) > MIN_ONSET_GAP) {
                 state       = 'ACTIVE';
                 speechEntry = now;
                 addCount(1);
@@ -1600,7 +1598,7 @@ function startBurstDetection(stream, actx) {
                 setTranscript(highlight('राधा'), false);
             }
 
-        } else { // ACTIVE — slowEMA frozen, so next chant always fires cleanly
+        } else { // ACTIVE — slowEMA frozen at ambient
             if (fastEMA < slowEMA * FALL_RATIO || (now - speechEntry) > MAX_SPEECH_MS) {
                 state = 'IDLE';
             }
