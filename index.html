@@ -823,15 +823,10 @@
             .bead { width: 28px; height: 28px; }
         }
 
-        /* ── 10K Game Countdown card ── */
+        /* ── 10K Game Countdown card (lives in milestone-col) ── */
         .game10k-card {
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(74,222,128,0.22);
-            border-radius: 20px;
-            padding: 14px 20px 12px;
-            margin-bottom: 16px;
-            width: 100%;
-            max-width: 340px;
+            /* milestone-card handles bg, border-radius, padding, width */
+            border-color: rgba(74,222,128,0.22);
             transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
         }
         .game10k-card.flash {
@@ -840,28 +835,15 @@
             animation: game10kFlash 0.9s ease;
         }
         @keyframes game10kFlash {
-            0%,100% { background: rgba(255,255,255,0.04); }
+            0%,100% { background: rgba(255,255,255,0.035); }
             40%     { background: rgba(74,222,128,0.12); }
         }
-        .game10k-title {
-            font-size: 0.52rem;
-            color: rgba(74,222,128,0.5);
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-            text-align: center;
-        }
-        .game10k-body {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-            justify-content: center;
-        }
+        .game10k-title { color: rgba(74,222,128,0.5); }
         .game10k-ring-wrap {
             position: relative;
             width: 64px;
             height: 64px;
-            flex-shrink: 0;
+            margin: 0 auto 9px;
         }
         .game10k-ring-svg {
             width: 64px;
@@ -892,28 +874,15 @@
             color: #4ade80;
             display: block;
         }
-        .game10k-info { text-align: left; }
         .game10k-num {
-            font-size: 2rem;
-            font-weight: 700;
+            /* milestone-count handles font-size/weight/display */
             color: #4ade80;
-            text-shadow: 0 0 20px rgba(74,222,128,0.5);
-            line-height: 1;
+            text-shadow: 0 0 12px rgba(74,222,128,0.4);
             transition: color 0.2s, text-shadow 0.2s;
         }
-        .game10k-sub {
-            font-size: 0.58rem;
-            color: rgba(255,255,255,0.32);
-            letter-spacing: 0.5px;
-            margin-top: 3px;
-            margin-bottom: 5px;
-        }
         .game10k-round {
-            font-size: 0.62rem;
-            color: rgba(74,222,128,0.5);
-            letter-spacing: 1.5px;
+            color: rgba(74,222,128,0.55);
             font-weight: 600;
-            text-transform: uppercase;
         }
 
         /* ── Graffiti celebration overlay (10 Lakh milestone) ── */
@@ -1048,6 +1017,29 @@
     <div class="milestone-sub" style="opacity:0.4;margin-top:3px;">● = 1 lakh</div>
   </div>
 
+  <!-- 10K Game Countdown -->
+  <div class="milestone-card game10k-card" id="game10k">
+    <div class="milestone-card-title game10k-title">10K · Countdown</div>
+    <div class="game10k-ring-wrap">
+      <svg class="game10k-ring-svg" viewBox="0 0 64 64">
+        <defs>
+          <linearGradient id="game10kGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#4ade80"/>
+            <stop offset="100%" stop-color="#ffd700"/>
+          </linearGradient>
+        </defs>
+        <circle class="game10k-ring-bg"   cx="32" cy="32" r="25"/>
+        <circle class="game10k-ring-fill" id="game10kRingFill" cx="32" cy="32" r="25"/>
+      </svg>
+      <div class="game10k-ring-center">
+        <span class="game10k-pct" id="game10kPct">0%</span>
+      </div>
+    </div>
+    <span class="milestone-count game10k-num" id="game10kNum">10,000</span>
+    <div class="milestone-sub game10k-sub" id="game10kSub">remaining</div>
+    <div class="milestone-sub game10k-round" id="game10kRound">Round 1</div>
+  </div>
+
   <!-- 1M — Ring Gauge -->
   <div class="milestone-card" id="m1m">
     <div class="milestone-card-title">10 Lakh · Ring</div>
@@ -1084,33 +1076,6 @@
     <div class="count-label">Radha Count</div>
     <div class="count-number" id="countDisplay">0</div>
     <div class="count-of-target" id="countOfTarget"></div>
-</div>
-
-<!-- 10K Game Countdown -->
-<div class="game10k-card" id="game10k">
-    <div class="game10k-title">10K Countdown</div>
-    <div class="game10k-body">
-        <div class="game10k-ring-wrap">
-            <svg class="game10k-ring-svg" viewBox="0 0 64 64">
-                <defs>
-                    <linearGradient id="game10kGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stop-color="#4ade80"/>
-                        <stop offset="100%" stop-color="#ffd700"/>
-                    </linearGradient>
-                </defs>
-                <circle class="game10k-ring-bg"   cx="32" cy="32" r="25"/>
-                <circle class="game10k-ring-fill" id="game10kRingFill" cx="32" cy="32" r="25"/>
-            </svg>
-            <div class="game10k-ring-center">
-                <span class="game10k-pct" id="game10kPct">0%</span>
-            </div>
-        </div>
-        <div class="game10k-info">
-            <div class="game10k-num" id="game10kNum">10,000</div>
-            <div class="game10k-sub" id="game10kSub">remaining in round</div>
-            <div class="game10k-round" id="game10kRound">Round 1</div>
-        </div>
-    </div>
 </div>
 
 <!-- Progress bar -->
