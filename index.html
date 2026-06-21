@@ -676,8 +676,8 @@
 
         /* ── Milestone trackers (500K + 1M) — left sticky column ── */
         .milestone-col {
-            flex: 0 0 160px;
-            width: 160px;
+            flex: 0 0 210px;
+            width: 210px;
             display: flex;
             flex-direction: column;
             gap: 14px;
@@ -822,6 +822,164 @@
             .milestone-col { flex-direction: column; }
             .bead { width: 28px; height: 28px; }
         }
+
+        /* ── 10K Game Countdown card ── */
+        .game10k-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(74,222,128,0.22);
+            border-radius: 20px;
+            padding: 14px 20px 12px;
+            margin-bottom: 16px;
+            width: 100%;
+            max-width: 340px;
+            transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+        }
+        .game10k-card.flash {
+            border-color: rgba(74,222,128,0.9);
+            box-shadow: 0 0 30px rgba(74,222,128,0.35);
+            animation: game10kFlash 0.9s ease;
+        }
+        @keyframes game10kFlash {
+            0%,100% { background: rgba(255,255,255,0.04); }
+            40%     { background: rgba(74,222,128,0.12); }
+        }
+        .game10k-title {
+            font-size: 0.52rem;
+            color: rgba(74,222,128,0.5);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .game10k-body {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            justify-content: center;
+        }
+        .game10k-ring-wrap {
+            position: relative;
+            width: 64px;
+            height: 64px;
+            flex-shrink: 0;
+        }
+        .game10k-ring-svg {
+            width: 64px;
+            height: 64px;
+            transform: rotate(-90deg);
+            overflow: visible;
+        }
+        .game10k-ring-bg  { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 6; }
+        .game10k-ring-fill {
+            fill: none;
+            stroke: url(#game10kGrad);
+            stroke-width: 6;
+            stroke-linecap: round;
+            stroke-dasharray: 157.08;
+            stroke-dashoffset: 157.08;
+            transition: stroke-dashoffset 0.3s ease;
+            filter: drop-shadow(0 0 5px rgba(74,222,128,0.5));
+        }
+        .game10k-ring-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%,-50%);
+            text-align: center;
+        }
+        .game10k-pct {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #4ade80;
+            display: block;
+        }
+        .game10k-info { text-align: left; }
+        .game10k-num {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4ade80;
+            text-shadow: 0 0 20px rgba(74,222,128,0.5);
+            line-height: 1;
+            transition: color 0.2s, text-shadow 0.2s;
+        }
+        .game10k-sub {
+            font-size: 0.58rem;
+            color: rgba(255,255,255,0.32);
+            letter-spacing: 0.5px;
+            margin-top: 3px;
+            margin-bottom: 5px;
+        }
+        .game10k-round {
+            font-size: 0.62rem;
+            color: rgba(74,222,128,0.5);
+            letter-spacing: 1.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* ── Graffiti celebration overlay (10 Lakh milestone) ── */
+        .graffiti-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.9);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            cursor: pointer;
+            backdrop-filter: blur(8px);
+        }
+        .graffiti-overlay.show { display: flex; }
+        .graf-spray {
+            font-size: 3.6rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 6px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffd700 25%, #4ade80 50%, #60a5fa 75%, #a855f7 100%);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: grafSplat 0.65s cubic-bezier(0.34,1.56,0.64,1) both,
+                       grafRainbow 2s linear infinite;
+            filter: drop-shadow(0 4px 24px rgba(255,215,0,0.5));
+            text-align: center;
+            padding: 0 16px;
+        }
+        @keyframes grafSplat {
+            0%   { transform: scale(0) rotate(-14deg); opacity: 0; }
+            65%  { transform: scale(1.16) rotate(2deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        @keyframes grafRainbow {
+            0%   { background-position: 0% 50%; }
+            100% { background-position: 300% 50%; }
+        }
+        .graf-sub-text {
+            font-size: 1.05rem;
+            color: rgba(255,255,255,0.85);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            animation: grafFadeUp 0.7s ease 0.35s both;
+        }
+        .graf-emoji {
+            font-size: 2rem;
+            letter-spacing: 10px;
+            animation: grafFadeUp 0.7s ease 0.65s both;
+        }
+        .graf-dismiss {
+            font-size: 0.6rem;
+            color: rgba(255,255,255,0.25);
+            letter-spacing: 2.5px;
+            margin-top: 8px;
+            text-transform: uppercase;
+            animation: grafFadeUp 0.7s ease 1s both;
+        }
+        @keyframes grafFadeUp {
+            from { opacity: 0; transform: translateY(18px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -867,6 +1025,14 @@
 <!-- Hidden file input for fallback restore (non-Chrome / mobile) -->
 <input type="file" id="restoreFileInput" accept=".json" style="display:none"
        onchange="handleRestoreFileInput(this)">
+
+<!-- Graffiti celebration overlay (fires when 10 Lakh is first reached) -->
+<div class="graffiti-overlay" id="graffitiOverlay" onclick="hideGraffiti()">
+    <div class="graf-spray">JAI RADHA!</div>
+    <div class="graf-sub-text" id="grafSubText">10 LAKH COMPLETE!</div>
+    <div class="graf-emoji">🙏 🎊 ✨ 🌸 🎉</div>
+    <div class="graf-dismiss">Tap anywhere to continue</div>
+</div>
 
 <div class="page-cols">
 
@@ -918,6 +1084,33 @@
     <div class="count-label">Radha Count</div>
     <div class="count-number" id="countDisplay">0</div>
     <div class="count-of-target" id="countOfTarget"></div>
+</div>
+
+<!-- 10K Game Countdown -->
+<div class="game10k-card" id="game10k">
+    <div class="game10k-title">10K Countdown</div>
+    <div class="game10k-body">
+        <div class="game10k-ring-wrap">
+            <svg class="game10k-ring-svg" viewBox="0 0 64 64">
+                <defs>
+                    <linearGradient id="game10kGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#4ade80"/>
+                        <stop offset="100%" stop-color="#ffd700"/>
+                    </linearGradient>
+                </defs>
+                <circle class="game10k-ring-bg"   cx="32" cy="32" r="25"/>
+                <circle class="game10k-ring-fill" id="game10kRingFill" cx="32" cy="32" r="25"/>
+            </svg>
+            <div class="game10k-ring-center">
+                <span class="game10k-pct" id="game10kPct">0%</span>
+            </div>
+        </div>
+        <div class="game10k-info">
+            <div class="game10k-num" id="game10kNum">10,000</div>
+            <div class="game10k-sub" id="game10kSub">remaining in round</div>
+            <div class="game10k-round" id="game10kRound">Round 1</div>
+        </div>
+    </div>
 </div>
 
 <!-- Progress bar -->
@@ -1131,7 +1324,10 @@ function saveTarget(dateKey, rawVal) {
     if (!val || val < 1) {
         delete targets[dateKey];
     } else {
-        targets[dateKey] = val;
+        // val = how many MORE you need; total target = already done + that delta
+        const hist = loadHistory();
+        const done = hist[dateKey] || 0;
+        targets[dateKey] = done + val;
     }
     localStorage.setItem(TARGETS_KEY, JSON.stringify(targets));
     updateBackfillBanner();
@@ -1178,6 +1374,7 @@ function updateGrandCard(liveTotalOverride) {
     if (totalDone >= GRAND_TARGET) {
         etaEl.innerHTML = `<span class="grand-eta-date">🎉 1 Crore Complete! Jai Radha!</span>`;
         updateMilestones(totalDone);
+        updateGame10k(totalDone);
         return;
     }
     if (avgPerDay < 1) {
@@ -1196,6 +1393,7 @@ function updateGrandCard(liveTotalOverride) {
         `<span class="grand-eta-days"> · ${daysLeft.toLocaleString('en-IN')} days</span>`;
 
     updateMilestones(totalDone);
+    updateGame10k(totalDone);
 }
 
 // Returns oldest past-date with an unfulfilled manual target, or null
@@ -1320,18 +1518,21 @@ function renderHistory() {
             const tgt      = targets[dk] || 0;
 
             // Target input (only for past dates, not today)
+            // Shows shortfall (how many more needed), not total target.
+            // Entering N sets target = already_done + N.
             let targetCell = '';
             if (!isToday) {
-                const tgtVal = tgt ? tgt : '';
+                const shortfall = tgt ? Math.max(0, tgt - done) : 0;
+                const tgtVal = shortfall > 0 ? shortfall : '';
                 targetCell = `<span class="day-target-cell">
                     <input class="day-target-input" type="number" min="1"
-                           placeholder="Target"
+                           placeholder="Add more"
                            value="${tgtVal}"
                            id="ti-${dk}"
                            onclick="event.stopPropagation()"
                            onblur="saveTarget('${dk}', this.value)"
                            onkeydown="if(event.key==='Enter'){saveTarget('${dk}',this.value);this.blur();event.preventDefault();event.stopPropagation();}"
-                           title="Type target and press Enter (or click away) to save" />
+                           title="Enter how many MORE you still need (e.g. 2000 = need 2000 more)" />
                 </span>`;
             } else {
                 targetCell = `<span class="day-target-cell"></span>`;
@@ -1528,6 +1729,15 @@ function buildRecognition() {
 let burstCtx      = null;
 let burstTimer    = null;
 let lastCountTime = 0;
+
+// 10L → 20L milestone state
+let m1mPhase2       = false; // true after 10L is first reached
+let m1mGraffitShown = false; // graffiti only fires once per session
+
+// 10K game countdown state
+const GAME_10K       = 10000;
+const GAME_RING_CIRC = 2 * Math.PI * 25; // r=25 → ≈157.08
+let game10kPrevBlock = -1;               // -1 so first load never celebrates
 
 const RISE_RATIO    = 1.8;   // fastEMA must be 1.8× ambient (lower = more sensitive)
 const FALL_RATIO    = 1.4;   // re-arm when fastEMA drops to 1.4× ambient
@@ -1760,6 +1970,59 @@ function resetAll() {
 }
 
 // ════════════════════════════════════════════════════════
+// GRAFFITI CELEBRATION  (fires once when 10 Lakh is first hit)
+// ════════════════════════════════════════════════════════
+function showGraffiti() {
+    const el = document.getElementById('graffitiOverlay');
+    if (!el) return;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 5500); // auto-dismiss after 5.5s
+}
+function hideGraffiti() {
+    const el = document.getElementById('graffitiOverlay');
+    if (el) el.classList.remove('show');
+}
+
+// ════════════════════════════════════════════════════════
+// 10K GAME COUNTDOWN
+// ════════════════════════════════════════════════════════
+function updateGame10k(total) {
+    const block   = Math.floor(total / GAME_10K);
+    const inBlock = total % GAME_10K;
+    const rem     = GAME_10K - inBlock;
+    const pct     = inBlock / GAME_10K;
+
+    document.getElementById('game10kNum').textContent      = rem.toLocaleString('en-IN');
+    document.getElementById('game10kPct').textContent      = Math.round(pct * 100) + '%';
+    document.getElementById('game10kRound').textContent    = 'Round ' + (block + 1);
+    document.getElementById('game10kRingFill').style.strokeDashoffset =
+        GAME_RING_CIRC * (1 - pct);
+
+    // Celebrate when a new 10K block completes (block number went up)
+    if (block > game10kPrevBlock && game10kPrevBlock >= 0) {
+        const card  = document.getElementById('game10k');
+        const numEl = document.getElementById('game10kNum');
+        const subEl = document.getElementById('game10kSub');
+        if (card) {
+            card.classList.remove('flash');
+            void card.offsetWidth; // force reflow to restart animation
+            card.classList.add('flash');
+            setTimeout(() => card.classList.remove('flash'), 1200);
+        }
+        if (numEl) {
+            numEl.style.color      = '#ffffff';
+            numEl.style.textShadow = '0 0 30px rgba(255,255,255,0.9)';
+            setTimeout(() => { numEl.style.color = ''; numEl.style.textShadow = ''; }, 1200);
+        }
+        if (subEl) {
+            subEl.textContent = '🎉 Round complete!';
+            setTimeout(() => { subEl.textContent = 'remaining in round'; }, 2200);
+        }
+    }
+    game10kPrevBlock = block;
+}
+
+// ════════════════════════════════════════════════════════
 // MILESTONE TRACKERS  (500K mala beads · 1M ring gauge)
 // ════════════════════════════════════════════════════════
 const M500K = 500000;
@@ -1813,31 +2076,59 @@ function updateMilestones(total) {
         }
     }
 
-    // ── 1M ring gauge ──
+    // ── 1M ring gauge — phases: 0→10L (phase 1) then 10L→20L (phase 2) ──
     if (card1m && !card1m.classList.contains('done')) {
-        const pct = Math.min(1, total / M1M);
-        const pctStr = pct < 0.01 ? (pct * 100).toFixed(2)
-                     : pct < 0.1  ? (pct * 100).toFixed(1)
-                     : Math.round(pct * 100);
-        document.getElementById('ringPct').textContent = pctStr + '%';
-        document.getElementById('m1mCount').textContent =
-            Math.min(total, M1M).toLocaleString('en-IN');
-        document.getElementById('ringFill').style.strokeDashoffset =
-            RING_CIRC * (1 - pct);
-
         const rf = document.getElementById('ringFill');
-        if (pct > 0 && !rf.classList.contains('pulsing')) rf.classList.add('pulsing');
 
-        if (total >= M1M) {
-            document.getElementById('m1mSub').textContent = '🎉 Jai Radha! 10 Lakh done!';
+        if (total < M1M) {
+            // Phase 1: tracking 0 → 10 Lakh
+            m1mPhase2 = false;
+            const pct = Math.min(1, total / M1M);
+            const pctStr = pct < 0.01 ? (pct * 100).toFixed(2)
+                         : pct < 0.1  ? (pct * 100).toFixed(1)
+                         : Math.round(pct * 100);
+            document.getElementById('ringPct').textContent  = pctStr + '%';
+            document.getElementById('m1mCount').textContent = total.toLocaleString('en-IN');
+            document.getElementById('ringFill').style.strokeDashoffset = RING_CIRC * (1 - pct);
+            if (pct > 0 && !rf.classList.contains('pulsing')) rf.classList.add('pulsing');
+            document.getElementById('m1mSub').textContent  = (M1M - total).toLocaleString('en-IN') + ' to go';
+
+        } else if (total < 2 * M1M) {
+            // Phase 2: 10L done — now tracking toward 20 Lakh
+            if (!m1mPhase2) {
+                m1mPhase2 = true;
+                // Update card title
+                const titleEl = card1m.querySelector('.milestone-card-title');
+                if (titleEl) titleEl.textContent = '20 Lakh · Ring';
+                // Show graffiti only the first time (not on page reload)
+                if (!m1mGraffitShown) {
+                    m1mGraffitShown = true;
+                    showGraffiti();
+                }
+                card1m.style.borderColor = ''; // reset any old green flash
+            }
+            // Always update title in case of page reload mid-phase-2
+            const titleEl = card1m.querySelector('.milestone-card-title');
+            if (titleEl) titleEl.textContent = '20 Lakh · Ring';
+
+            const pct2 = Math.min(1, (total - M1M) / M1M);
+            const pctStr2 = pct2 < 0.01 ? (pct2 * 100).toFixed(2)
+                          : pct2 < 0.1  ? (pct2 * 100).toFixed(1)
+                          : Math.round(pct2 * 100);
+            document.getElementById('ringPct').textContent  = pctStr2 + '%';
+            document.getElementById('m1mCount').textContent = total.toLocaleString('en-IN');
+            document.getElementById('ringFill').style.strokeDashoffset = RING_CIRC * (1 - pct2);
+            if (!rf.classList.contains('pulsing')) rf.classList.add('pulsing');
+            document.getElementById('m1mSub').textContent  = (2 * M1M - total).toLocaleString('en-IN') + ' to go';
+
+        } else {
+            // Phase 3: 20L complete — fade out the card
+            document.getElementById('m1mSub').textContent = '🎉 Jai Radha! 20 Lakh done!';
             card1m.style.borderColor = 'rgba(74,222,128,0.55)';
             setTimeout(() => {
                 card1m.classList.add('done');
                 card1m.addEventListener('transitionend', () => { card1m.style.display = 'none'; }, { once: true });
             }, 2500);
-        } else {
-            document.getElementById('m1mSub').textContent =
-                (M1M - total).toLocaleString('en-IN') + ' to go';
         }
     }
 
@@ -1850,6 +2141,10 @@ function updateMilestones(total) {
 
 // Initialise cached grand total and paint the card on page load
 savedGrandTotal = Object.values(loadHistory()).reduce((a, b) => a + b, 0);
+// Seed phase flags from saved total so no celebrations fire on page reload
+m1mPhase2       = savedGrandTotal >= M1M;
+m1mGraffitShown = savedGrandTotal >= M1M;
+game10kPrevBlock = Math.floor(savedGrandTotal / GAME_10K);
 initMalaBeads();
 updateGrandCard();
 // Show backfill banner on page load if a pending target already exists
