@@ -673,8 +673,8 @@
 
         /* ── Milestone trackers (500K + 1M) — left sticky column ── */
         .milestone-col {
-            flex: 0 0 210px;
-            width: 210px;
+            flex: 0 0 280px;
+            width: 280px;
             display: flex;
             flex-direction: column;
             gap: 14px;
@@ -682,27 +682,27 @@
             top: 32px;
             align-self: flex-start;
         }
-        /* ══ RACE CAR DASHBOARD — left column cards ═══════════════ */
+        /* ══ PANEL CARDS — left column, purple/gold scheme ═══════════════ */
         .milestone-card {
             flex: 1;
-            background: rgba(6, 3, 1, 0.96);
-            border: 1px solid rgba(255, 90, 0, 0.38);
-            border-radius: 10px;
-            padding: 12px 12px 10px;
+            background: rgba(14, 6, 32, 0.95);
+            border: 1px solid rgba(255, 215, 0, 0.22);
+            border-radius: 16px;
+            padding: 16px 16px 14px;
             text-align: center;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(20px);
             transition: opacity 0.9s ease, transform 0.9s ease, border-color 0.4s ease, box-shadow 0.4s ease;
             overflow: hidden;
             position: relative;
-            box-shadow: 0 0 18px rgba(255,80,0,0.07), inset 0 1px 0 rgba(255,255,255,0.04);
+            box-shadow: 0 0 50px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05);
         }
-        /* Hot-orange accent stripe across the top — like an F1 panel */
+        /* Purple→gold accent stripe across the top */
         .milestone-card::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0;
             height: 2px;
-            background: linear-gradient(90deg, transparent 5%, #ff4400 30%, #ffaa00 50%, #ff4400 70%, transparent 95%);
+            background: linear-gradient(90deg, transparent 5%, #7c3aed 25%, #ffd700 50%, #7c3aed 75%, transparent 95%);
         }
         .milestone-card.done {
             opacity: 0;
@@ -710,31 +710,31 @@
             pointer-events: none;
         }
         .milestone-card-title {
-            font-size: 0.5rem;
-            color: rgba(255, 140, 0, 0.65);
+            font-size: 0.65rem;
+            color: rgba(255, 215, 0, 0.55);
             letter-spacing: 3px;
             text-transform: uppercase;
-            margin-bottom: 9px;
+            margin-bottom: 10px;
             font-family: 'Courier New', Courier, monospace;
         }
         .milestone-count {
-            font-size: 1rem;
-            color: #ff8c00;
+            font-size: 1.8rem;
+            color: #ffd700;
             font-weight: 700;
             display: block;
-            margin-bottom: 2px;
-            text-shadow: 0 0 14px rgba(255,140,0,0.7);
-            letter-spacing: 1px;
+            margin-bottom: 3px;
+            text-shadow: 0 0 22px rgba(255,215,0,0.65);
+            letter-spacing: 0.5px;
             font-family: 'Courier New', Courier, monospace;
         }
         .milestone-sub {
-            font-size: 0.56rem;
-            color: rgba(255, 140, 0, 0.4);
+            font-size: 0.65rem;
+            color: rgba(255, 215, 0, 0.4);
             letter-spacing: 0.8px;
-            line-height: 1.5;
+            line-height: 1.6;
         }
 
-        /* F1 sector lights (5L mala beads) */
+        /* Panel lights (5L mala beads) */
         .mala-beads {
             display: flex;
             justify-content: center;
@@ -746,14 +746,14 @@
             width: 28px;
             height: 14px;
             border-radius: 3px;
-            background: rgba(180, 20, 0, 0.15);
-            border: 1px solid rgba(255, 60, 0, 0.2);
+            background: rgba(60, 10, 100, 0.2);
+            border: 1px solid rgba(160, 90, 255, 0.2);
             transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
         }
         .bead.lit {
-            background: linear-gradient(180deg, #ff6600, #ff2200);
-            border-color: rgba(255, 100, 0, 0.9);
-            box-shadow: 0 0 8px rgba(255,80,0,0.9), 0 0 18px rgba(255,80,0,0.4);
+            background: linear-gradient(180deg, #ffd700, #7c3aed);
+            border-color: rgba(255, 215, 0, 0.9);
+            box-shadow: 0 0 8px rgba(255,215,0,0.85), 0 0 18px rgba(124,58,237,0.5);
         }
         @keyframes beadPop {
             0%   { transform: scaleX(0.3); }
@@ -788,7 +788,7 @@
             stroke-dasharray: 188.5;
             stroke-dashoffset: 188.5;
             transition: stroke-dashoffset 0.9s ease;
-            filter: drop-shadow(0 0 6px rgba(255,100,0,0.7));
+            filter: drop-shadow(0 0 6px rgba(255,215,0,0.7));
         }
         .ring-center {
             position: absolute;
@@ -819,60 +819,60 @@
 
         /* ── Block countdown cards (25K / 50K / 100K) ── */
         .block-mini-header {
-            font-size: 0.52rem;
-            color: rgba(255,80,0,0.55);
+            font-size: 0.65rem;
+            color: rgba(255,215,0,0.5);
             letter-spacing: 2.5px;
             font-family: 'Courier New', Courier, monospace;
             font-weight: 700;
             text-transform: uppercase;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
         .block-mini-num {
-            font-size: 1.55rem;
+            font-size: 2.4rem;
             font-weight: 700;
-            color: #ff8c00;
+            color: #ffd700;
             font-family: 'Courier New', Courier, monospace;
-            text-shadow: 0 0 16px rgba(255,140,0,0.65);
+            text-shadow: 0 0 24px rgba(255,215,0,0.6);
             letter-spacing: -1px;
             line-height: 1;
         }
         .block-mini-sub {
-            font-size: 0.46rem;
-            color: rgba(255,140,0,0.35);
+            font-size: 0.6rem;
+            color: rgba(255,215,0,0.35);
             text-transform: uppercase;
             letter-spacing: 2px;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
         .block-bar-bg {
             width: 100%;
-            height: 8px;
-            background: rgba(255,60,0,0.1);
-            border-radius: 3px;
+            height: 10px;
+            background: rgba(124,58,237,0.1);
+            border-radius: 5px;
             overflow: hidden;
-            border: 1px solid rgba(255,80,0,0.18);
+            border: 1px solid rgba(255,215,0,0.15);
         }
         .block-bar-fill {
             height: 100%;
-            background: linear-gradient(90deg, #ff2200, #ff9000);
-            border-radius: 3px;
+            background: linear-gradient(90deg, #7c3aed, #ffd700);
+            border-radius: 5px;
             width: 0%;
             transition: width 0.5s ease;
-            box-shadow: 0 0 7px rgba(255,100,0,0.7);
+            box-shadow: 0 0 8px rgba(255,215,0,0.6);
         }
         .block-mini-footer {
             display: flex;
             justify-content: space-between;
-            margin-top: 5px;
+            margin-top: 7px;
         }
         .block-mini-done-lbl {
-            font-size: 0.5rem;
-            color: rgba(255,140,0,0.35);
+            font-size: 0.6rem;
+            color: rgba(255,215,0,0.35);
             font-family: 'Courier New', Courier, monospace;
             letter-spacing: 0.5px;
         }
         .block-mini-pct {
-            font-size: 0.5rem;
-            color: rgba(255,140,0,0.5);
+            font-size: 0.6rem;
+            color: rgba(255,215,0,0.55);
             font-family: 'Courier New', Courier, monospace;
             font-weight: 700;
         }
@@ -907,38 +907,24 @@
             margin-bottom: 12px;
             line-height: 1.9;
         }
-        .pace-if-label {
-            font-size: 0.6rem;
-            color: rgba(255,255,255,0.38);
-            letter-spacing: 1px;
-            margin-bottom: 6px;
-        }
-        .pace-input-row {
+        .pace-basis-row {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 5px;
-            justify-content: center;
+            gap: 4px;
             margin-bottom: 12px;
         }
-        .pace-input {
-            background: rgba(255,255,255,0.08);
-            border: 1px solid rgba(255,215,0,0.3);
-            border-radius: 8px;
-            color: #ffd700;
-            font-size: 0.85rem;
-            font-weight: 700;
-            padding: 5px 6px;
-            width: 88px;
-            text-align: center;
-            outline: none;
-            -moz-appearance: textfield;
+        .pace-basis-lbl {
+            font-size: 0.55rem;
+            color: rgba(255,255,255,0.32);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
-        .pace-input::-webkit-outer-spin-button,
-        .pace-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-        .pace-input:focus { border-color: rgba(255,215,0,0.7); }
-        .pace-per-day {
-            font-size: 0.58rem;
-            color: rgba(255,215,0,0.4);
+        .pace-basis-val {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #ffd700;
+            text-shadow: 0 0 16px rgba(255,215,0,0.5);
             letter-spacing: 1px;
         }
         .pace-result-box {
@@ -990,29 +976,29 @@
             .bead { width: 28px; height: 28px; }
         }
 
-        /* ── 10K Game Countdown card — race car orange theme ── */
+        /* ── 10K Game Countdown card ── */
         .game10k-card {
-            border-color: rgba(255, 180, 0, 0.45);
+            border-color: rgba(255, 215, 0, 0.38);
         }
         .game10k-card.flash {
-            border-color: rgba(255,220,0,0.9);
-            box-shadow: 0 0 28px rgba(255,180,0,0.5);
+            border-color: rgba(255,215,0,0.9);
+            box-shadow: 0 0 30px rgba(255,215,0,0.4), 0 0 60px rgba(124,58,237,0.3);
             animation: game10kFlash 0.9s ease;
         }
         @keyframes game10kFlash {
-            0%,100% { background: rgba(6,3,1,0.96); }
-            40%     { background: rgba(255,150,0,0.12); }
+            0%,100% { background: rgba(14,6,32,0.95); }
+            40%     { background: rgba(124,58,237,0.15); }
         }
-        .game10k-title { color: rgba(255,200,0,0.65); }
+        .game10k-title { color: rgba(255,215,0,0.6); }
         .game10k-ring-wrap {
             position: relative;
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 9px;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 10px;
         }
         .game10k-ring-svg {
-            width: 64px;
-            height: 64px;
+            width: 80px;
+            height: 80px;
             transform: rotate(-90deg);
             overflow: visible;
         }
@@ -1025,7 +1011,7 @@
             stroke-dasharray: 157.08;
             stroke-dashoffset: 157.08;
             transition: stroke-dashoffset 0.3s ease;
-            filter: drop-shadow(0 0 6px rgba(255,160,0,0.7));
+            filter: drop-shadow(0 0 6px rgba(255,215,0,0.7));
         }
         .game10k-ring-center {
             position: absolute;
@@ -1034,19 +1020,19 @@
             text-align: center;
         }
         .game10k-pct {
-            font-size: 0.68rem;
+            font-size: 0.72rem;
             font-weight: 700;
-            color: #ffcc00;
+            color: #ffd700;
             display: block;
             font-family: 'Courier New', Courier, monospace;
         }
         .game10k-num {
-            color: #ffcc00;
-            text-shadow: 0 0 14px rgba(255,200,0,0.6);
+            color: #ffd700;
+            text-shadow: 0 0 18px rgba(255,215,0,0.6);
             transition: color 0.2s, text-shadow 0.2s;
         }
         .game10k-round {
-            color: rgba(255,180,0,0.6);
+            color: rgba(255,215,0,0.5);
             font-weight: 600;
         }
 
@@ -1189,8 +1175,8 @@
       <svg class="game10k-ring-svg" viewBox="0 0 64 64">
         <defs>
           <linearGradient id="game10kGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#ff8c00"/>
-            <stop offset="100%" stop-color="#ffee00"/>
+            <stop offset="0%" stop-color="#7c3aed"/>
+            <stop offset="100%" stop-color="#ffd700"/>
           </linearGradient>
         </defs>
         <circle class="game10k-ring-bg"   cx="32" cy="32" r="25"/>
@@ -1246,8 +1232,8 @@
       <svg class="ring-svg" viewBox="0 0 78 78">
         <defs>
           <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#ff2200"/>
-            <stop offset="100%" stop-color="#ff9500"/>
+            <stop offset="0%" stop-color="#7c3aed"/>
+            <stop offset="100%" stop-color="#ffd700"/>
           </linearGradient>
         </defs>
         <circle class="ring-bg" cx="39" cy="39" r="30"/>
@@ -1364,18 +1350,15 @@
 
 <div class="pace-card" id="paceCard">
     <div class="pace-card-title">Daily Pace<br>Calculator</div>
-    <div class="pace-if-label">If I do</div>
-    <div class="pace-input-row">
-        <input class="pace-input" id="paceInput" type="number" min="1" placeholder="—" />
-        <span class="pace-per-day">/ day</span>
+    <div class="pace-basis-row">
+        <span class="pace-basis-lbl">Based on your 7-day avg</span>
+        <span class="pace-basis-val" id="paceAvg7">—</span>
     </div>
     <div class="pace-result-box" id="paceResult">—</div>
     <hr class="pace-divider">
     <div class="pace-hints" id="paceHints">
-        7-day avg: <strong id="paceAvg7">—</strong><br>
         Today so far: <strong id="paceTodaySoFar">0</strong>
     </div>
-    <span class="pace-hint-btn" onclick="resetPaceInput()">↺ Reset to 7-day avg</span>
 </div><!-- /pace-card -->
 
 </div><!-- /right-col -->
@@ -1930,7 +1913,6 @@ const GAME_RING_CIRC = 2 * Math.PI * 25; // r=25 → ≈157.08
 let game10kPrevBlock = -1;               // -1 so first load never celebrates
 
 // Pace calculator state
-let paceUserEdited = false;
 
 const RISE_RATIO    = 1.8;   // fastEMA must be 1.8× ambient (lower = more sensitive)
 const FALL_RATIO    = 1.4;   // re-arm when fastEMA drops to 1.4× ambient
@@ -2200,21 +2182,17 @@ function getPace7dayAvg() {
 }
 
 function updatePaceCalc(total) {
-    const hist     = loadHistory();
-    const today    = todayKey();
-    const todayN   = hist[today] || 0;
-    const avg7     = getPace7dayAvg();
+    const hist    = loadHistory();
+    const today   = todayKey();
+    const todayN  = hist[today] || 0;
+    const avg7    = getPace7dayAvg();
+    const pace    = avg7 > 0 ? avg7 : Math.max(1, todayN);
 
-    // Auto-fill input with 7-day avg when user hasn't edited it manually
-    const inp = document.getElementById('paceInput');
-    if (inp && !paceUserEdited && avg7 > 0) inp.value = avg7;
-
-    const pace = inp ? (parseInt(inp.value, 10) || avg7 || 1) : 1;
     computePaceResult(total, pace);
 
     const avg7El  = document.getElementById('paceAvg7');
     const todayEl = document.getElementById('paceTodaySoFar');
-    if (avg7El)  avg7El.textContent  = avg7 > 0 ? avg7.toLocaleString('en-IN') + '/day' : '—';
+    if (avg7El)  avg7El.textContent  = avg7 > 0 ? avg7.toLocaleString('en-IN') + ' / day' : '—';
     if (todayEl) todayEl.textContent = todayN.toLocaleString('en-IN');
 }
 
@@ -2236,14 +2214,6 @@ function computePaceResult(total, pace) {
         `<span class="pace-days">${daysLeft.toLocaleString('en-IN')} days</span>` +
         `<span class="pace-date">${dateLabel}</span>` +
         `<span class="pace-months">(~${months} months)</span>`;
-}
-
-function resetPaceInput() {
-    paceUserEdited = false;
-    const inp = document.getElementById('paceInput');
-    const avg7 = getPace7dayAvg();
-    if (inp && avg7 > 0) inp.value = avg7;
-    computePaceResult(savedGrandTotal + unsavedCount, avg7 || 1);
 }
 
 // ════════════════════════════════════════════════════════
@@ -2429,15 +2399,6 @@ updateBackfillBanner();
 // Show restore modal if history is empty
 checkAndMaybeShowRestore();
 
-// Pace calculator input listeners
-const _paceInp = document.getElementById('paceInput');
-if (_paceInp) {
-    _paceInp.addEventListener('input', () => {
-        paceUserEdited = true;
-        computePaceResult(savedGrandTotal + unsavedCount, parseInt(_paceInp.value, 10) || 1);
-    });
-    _paceInp.addEventListener('focus', () => { paceUserEdited = true; });
-}
 
 // ════════════════════════════════════════════════════════
 // RESTORE FROM BACKUP FILE
