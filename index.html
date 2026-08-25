@@ -385,11 +385,6 @@
 
         /* ── Maha Lakshya — right column panel (desktop) ── */
         .grand-card {
-            flex: 0 0 210px;
-            width: 210px;
-            position: sticky;
-            top: 32px;
-            align-self: flex-start;
             background: rgba(18, 4, 36, 0.92);
             border: 1px solid rgba(255,215,0,0.22);
             border-radius: 18px;
@@ -473,6 +468,8 @@
         /* Mobile: slim strip pinned to bottom ─────────────── */
         @media (max-width: 900px) {
             .page-cols { flex-direction: column; align-items: center; }
+            .right-col { position: static; flex: none; width: 100%; }
+            .pace-card  { display: none; }
             .grand-card {
                 position: fixed;
                 right: auto; left: 0;
@@ -685,17 +682,27 @@
             top: 32px;
             align-self: flex-start;
         }
+        /* ══ RACE CAR DASHBOARD — left column cards ═══════════════ */
         .milestone-card {
             flex: 1;
-            background: rgba(255,255,255,0.035);
-            border: 1px solid rgba(255,215,0,0.18);
-            border-radius: 20px;
-            padding: 14px 12px 12px;
+            background: rgba(6, 3, 1, 0.96);
+            border: 1px solid rgba(255, 90, 0, 0.38);
+            border-radius: 10px;
+            padding: 12px 12px 10px;
             text-align: center;
-            backdrop-filter: blur(8px);
-            transition: opacity 0.9s ease, transform 0.9s ease, border-color 0.4s ease;
+            backdrop-filter: blur(10px);
+            transition: opacity 0.9s ease, transform 0.9s ease, border-color 0.4s ease, box-shadow 0.4s ease;
             overflow: hidden;
             position: relative;
+            box-shadow: 0 0 18px rgba(255,80,0,0.07), inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        /* Hot-orange accent stripe across the top — like an F1 panel */
+        .milestone-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent 5%, #ff4400 30%, #ffaa00 50%, #ff4400 70%, transparent 95%);
         }
         .milestone-card.done {
             opacity: 0;
@@ -703,56 +710,59 @@
             pointer-events: none;
         }
         .milestone-card-title {
-            font-size: 0.52rem;
-            color: rgba(255,215,0,0.48);
-            letter-spacing: 2.5px;
+            font-size: 0.5rem;
+            color: rgba(255, 140, 0, 0.65);
+            letter-spacing: 3px;
             text-transform: uppercase;
-            margin-bottom: 11px;
+            margin-bottom: 9px;
+            font-family: 'Courier New', Courier, monospace;
         }
         .milestone-count {
-            font-size: 0.85rem;
-            color: #ffd700;
+            font-size: 1rem;
+            color: #ff8c00;
             font-weight: 700;
             display: block;
             margin-bottom: 2px;
-            text-shadow: 0 0 12px rgba(255,215,0,0.4);
+            text-shadow: 0 0 14px rgba(255,140,0,0.7);
+            letter-spacing: 1px;
+            font-family: 'Courier New', Courier, monospace;
         }
         .milestone-sub {
-            font-size: 0.58rem;
-            color: rgba(255,215,0,0.38);
-            letter-spacing: 0.3px;
+            font-size: 0.56rem;
+            color: rgba(255, 140, 0, 0.4);
+            letter-spacing: 0.8px;
             line-height: 1.5;
         }
 
-        /* Mala beads (500K) */
+        /* F1 sector lights (5L mala beads) */
         .mala-beads {
             display: flex;
             justify-content: center;
-            gap: 4px;
+            gap: 5px;
             margin-bottom: 9px;
             flex-wrap: wrap;
         }
         .bead {
             width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.07);
-            border: 1px solid rgba(255,215,0,0.12);
-            transition: background 0.5s ease, box-shadow 0.5s ease, border-color 0.5s ease;
+            height: 14px;
+            border-radius: 3px;
+            background: rgba(180, 20, 0, 0.15);
+            border: 1px solid rgba(255, 60, 0, 0.2);
+            transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
         }
         .bead.lit {
-            background: radial-gradient(circle at 35% 32%, #fffde7, #ffd700 55%, #f59e0b 85%);
-            border-color: rgba(255,215,0,0.75);
-            box-shadow: 0 0 7px rgba(255,215,0,0.65), 0 0 14px rgba(255,215,0,0.25);
+            background: linear-gradient(180deg, #ff6600, #ff2200);
+            border-color: rgba(255, 100, 0, 0.9);
+            box-shadow: 0 0 8px rgba(255,80,0,0.9), 0 0 18px rgba(255,80,0,0.4);
         }
         @keyframes beadPop {
-            0%   { transform: scale(0.45); }
-            70%  { transform: scale(1.18); }
-            100% { transform: scale(1); }
+            0%   { transform: scaleX(0.3); }
+            70%  { transform: scaleX(1.12); }
+            100% { transform: scaleX(1); }
         }
-        .bead.just-lit { animation: beadPop 0.38s cubic-bezier(0.34,1.56,0.64,1); }
+        .bead.just-lit { animation: beadPop 0.3s cubic-bezier(0.34,1.56,0.64,1); }
 
-        /* Ring gauge (1M) */
+        /* Tachometer ring (1M/20L) */
         .ring-wrap {
             position: relative;
             width: 78px;
@@ -767,7 +777,7 @@
         }
         .ring-bg {
             fill: none;
-            stroke: rgba(255,255,255,0.07);
+            stroke: rgba(255,255,255,0.06);
             stroke-width: 7;
         }
         .ring-fill {
@@ -778,7 +788,7 @@
             stroke-dasharray: 188.5;
             stroke-dashoffset: 188.5;
             transition: stroke-dashoffset 0.9s ease;
-            filter: drop-shadow(0 0 5px rgba(255,215,0,0.5));
+            filter: drop-shadow(0 0 6px rgba(255,100,0,0.7));
         }
         .ring-center {
             position: absolute;
@@ -790,21 +800,163 @@
         .ring-pct {
             font-size: 0.95rem;
             font-weight: 700;
-            color: #ffd700;
+            color: #ff8c00;
             display: block;
-            text-shadow: 0 0 10px rgba(255,215,0,0.5);
+            text-shadow: 0 0 10px rgba(255,140,0,0.7);
+            font-family: 'Courier New', Courier, monospace;
         }
         .ring-label {
             font-size: 0.38rem;
-            color: rgba(255,215,0,0.4);
+            color: rgba(255, 140, 0, 0.45);
             letter-spacing: 1.5px;
             text-transform: uppercase;
         }
         @keyframes ringPulse {
-            0%,100% { filter: drop-shadow(0 0 5px rgba(255,215,0,0.5)); }
-            50%      { filter: drop-shadow(0 0 12px rgba(255,215,0,0.9)); }
+            0%,100% { filter: drop-shadow(0 0 5px rgba(255,100,0,0.6)); }
+            50%      { filter: drop-shadow(0 0 14px rgba(255,150,0,0.95)); }
         }
-        .ring-fill.pulsing { animation: ringPulse 1.6s ease-in-out infinite; }
+        .ring-fill.pulsing { animation: ringPulse 1.4s ease-in-out infinite; }
+
+        /* ── Block countdown rows (25K / 50K / 100K) ── */
+        .block-rows { margin-top: 6px; }
+        .block-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 7px;
+        }
+        .block-row:last-child { margin-bottom: 0; }
+        .block-label {
+            font-size: 0.55rem;
+            color: rgba(255,140,0,0.7);
+            letter-spacing: 0.5px;
+            font-weight: 700;
+            width: 30px;
+            flex-shrink: 0;
+            text-align: left;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .block-bar-bg {
+            flex: 1;
+            height: 5px;
+            background: rgba(255,60,0,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            border: 1px solid rgba(255,80,0,0.15);
+        }
+        .block-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff2200, #ff8c00);
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.4s ease;
+            box-shadow: 0 0 5px rgba(255,100,0,0.6);
+        }
+        .block-rem {
+            font-size: 0.52rem;
+            color: rgba(255,140,0,0.75);
+            font-weight: 700;
+            width: 44px;
+            flex-shrink: 0;
+            text-align: right;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        /* ── Right column wrapper ── */
+        .right-col {
+            flex: 0 0 210px;
+            width: 210px;
+            position: sticky;
+            top: 32px;
+            align-self: flex-start;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* ── Pace calculator card ── */
+        .pace-card {
+            background: rgba(18, 4, 36, 0.92);
+            border: 1px solid rgba(255,215,0,0.18);
+            border-radius: 18px;
+            padding: 16px 14px 14px;
+            text-align: center;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 0 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
+        }
+        .pace-card-title {
+            font-size: 0.58rem;
+            color: rgba(255,215,0,0.5);
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            line-height: 1.9;
+        }
+        .pace-if-label {
+            font-size: 0.6rem;
+            color: rgba(255,255,255,0.38);
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        .pace-input-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+        .pace-input {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 8px;
+            color: #ffd700;
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 5px 6px;
+            width: 88px;
+            text-align: center;
+            outline: none;
+            -moz-appearance: textfield;
+        }
+        .pace-input::-webkit-outer-spin-button,
+        .pace-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .pace-input:focus { border-color: rgba(255,215,0,0.7); }
+        .pace-per-day {
+            font-size: 0.58rem;
+            color: rgba(255,215,0,0.4);
+            letter-spacing: 1px;
+        }
+        .pace-result-box {
+            min-height: 50px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .pace-days  { font-size: 1.3rem; font-weight: 700; color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,0.5); line-height: 1.1; }
+        .pace-date  { font-size: 0.76rem; color: rgba(255,215,0,0.85); font-weight: 700; margin-top: 2px; display: block; }
+        .pace-months{ font-size: 0.58rem; color: rgba(255,215,0,0.42); margin-top: 2px; display: block; }
+        .pace-divider { border: none; border-top: 1px solid rgba(255,215,0,0.1); margin: 8px 0; }
+        .pace-hints {
+            font-size: 0.57rem;
+            color: rgba(255,255,255,0.32);
+            letter-spacing: 0.3px;
+            line-height: 2;
+            text-align: left;
+        }
+        .pace-hints strong { color: rgba(255,215,0,0.65); font-weight: 600; }
+        .pace-hint-btn {
+            margin-top: 8px;
+            font-size: 0.55rem;
+            color: rgba(255,215,0,0.4);
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            display: block;
+        }
+        .pace-hint-btn:hover { color: rgba(255,215,0,0.75); }
 
         /* Mobile: milestone col becomes a horizontal strip above main content */
         @media (max-width: 900px) {
@@ -823,22 +975,20 @@
             .bead { width: 28px; height: 28px; }
         }
 
-        /* ── 10K Game Countdown card (lives in milestone-col) ── */
+        /* ── 10K Game Countdown card — race car orange theme ── */
         .game10k-card {
-            /* milestone-card handles bg, border-radius, padding, width */
-            border-color: rgba(74,222,128,0.22);
-            transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+            border-color: rgba(255, 180, 0, 0.45);
         }
         .game10k-card.flash {
-            border-color: rgba(74,222,128,0.9);
-            box-shadow: 0 0 30px rgba(74,222,128,0.35);
+            border-color: rgba(255,220,0,0.9);
+            box-shadow: 0 0 28px rgba(255,180,0,0.5);
             animation: game10kFlash 0.9s ease;
         }
         @keyframes game10kFlash {
-            0%,100% { background: rgba(255,255,255,0.035); }
-            40%     { background: rgba(74,222,128,0.12); }
+            0%,100% { background: rgba(6,3,1,0.96); }
+            40%     { background: rgba(255,150,0,0.12); }
         }
-        .game10k-title { color: rgba(74,222,128,0.5); }
+        .game10k-title { color: rgba(255,200,0,0.65); }
         .game10k-ring-wrap {
             position: relative;
             width: 64px;
@@ -851,7 +1001,7 @@
             transform: rotate(-90deg);
             overflow: visible;
         }
-        .game10k-ring-bg  { fill: none; stroke: rgba(255,255,255,0.07); stroke-width: 6; }
+        .game10k-ring-bg  { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 6; }
         .game10k-ring-fill {
             fill: none;
             stroke: url(#game10kGrad);
@@ -860,7 +1010,7 @@
             stroke-dasharray: 157.08;
             stroke-dashoffset: 157.08;
             transition: stroke-dashoffset 0.3s ease;
-            filter: drop-shadow(0 0 5px rgba(74,222,128,0.5));
+            filter: drop-shadow(0 0 6px rgba(255,160,0,0.7));
         }
         .game10k-ring-center {
             position: absolute;
@@ -871,17 +1021,17 @@
         .game10k-pct {
             font-size: 0.68rem;
             font-weight: 700;
-            color: #4ade80;
+            color: #ffcc00;
             display: block;
+            font-family: 'Courier New', Courier, monospace;
         }
         .game10k-num {
-            /* milestone-count handles font-size/weight/display */
-            color: #4ade80;
-            text-shadow: 0 0 12px rgba(74,222,128,0.4);
+            color: #ffcc00;
+            text-shadow: 0 0 14px rgba(255,200,0,0.6);
             transition: color 0.2s, text-shadow 0.2s;
         }
         .game10k-round {
-            color: rgba(74,222,128,0.55);
+            color: rgba(255,180,0,0.6);
             font-weight: 600;
         }
 
@@ -1024,8 +1174,8 @@
       <svg class="game10k-ring-svg" viewBox="0 0 64 64">
         <defs>
           <linearGradient id="game10kGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#4ade80"/>
-            <stop offset="100%" stop-color="#ffd700"/>
+            <stop offset="0%" stop-color="#ff8c00"/>
+            <stop offset="100%" stop-color="#ffee00"/>
           </linearGradient>
         </defs>
         <circle class="game10k-ring-bg"   cx="32" cy="32" r="25"/>
@@ -1040,6 +1190,28 @@
     <div class="milestone-sub game10k-round" id="game10kRound">Round 1</div>
   </div>
 
+  <!-- Block Countdowns: 25K / 50K / 100K -->
+  <div class="milestone-card" id="blockCard">
+    <div class="milestone-card-title">Next Targets</div>
+    <div class="block-rows">
+      <div class="block-row">
+        <span class="block-label">25K</span>
+        <div class="block-bar-bg"><div class="block-bar-fill" id="b25kFill"></div></div>
+        <span class="block-rem" id="b25kRem">25,000</span>
+      </div>
+      <div class="block-row">
+        <span class="block-label">50K</span>
+        <div class="block-bar-bg"><div class="block-bar-fill" id="b50kFill"></div></div>
+        <span class="block-rem" id="b50kRem">50,000</span>
+      </div>
+      <div class="block-row">
+        <span class="block-label">100K</span>
+        <div class="block-bar-bg"><div class="block-bar-fill" id="b100kFill"></div></div>
+        <span class="block-rem" id="b100kRem">1,00,000</span>
+      </div>
+    </div>
+  </div>
+
   <!-- 1M — Ring Gauge -->
   <div class="milestone-card" id="m1m">
     <div class="milestone-card-title">10 Lakh · Ring</div>
@@ -1047,8 +1219,8 @@
       <svg class="ring-svg" viewBox="0 0 78 78">
         <defs>
           <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="#7c3aed"/>
-            <stop offset="100%" stop-color="#ffd700"/>
+            <stop offset="0%" stop-color="#ff2200"/>
+            <stop offset="100%" stop-color="#ff9500"/>
           </linearGradient>
         </defs>
         <circle class="ring-bg" cx="39" cy="39" r="30"/>
@@ -1146,13 +1318,15 @@
 
 </div><!-- /main-col -->
 
-<!-- ── Right column: Maha Lakshya ── -->
+<!-- ── Right column: Maha Lakshya + Pace Calculator ── -->
+<div class="right-col" id="rightCol">
+
 <div class="grand-card" id="grandCard">
     <div class="grand-title">Maha<br>Lakshya<br>1 Crore</div>
     <div class="grand-done-row">
         <span class="grand-done-num" id="grandDoneNum">0</span>
         <span class="grand-of-label">of 1,00,00,000</span>
-        <span class="grand-pct" id="grandPct">(0%)</span>
+        <span class="grand-pct" id="grandPct">(0.00%)</span>
     </div>
     <div class="grand-bar-bg">
         <div class="grand-bar-fill" id="grandBarFill"></div>
@@ -1160,6 +1334,24 @@
     <hr class="grand-divider">
     <div class="grand-eta" id="grandEta">—</div>
 </div><!-- /grand-card -->
+
+<div class="pace-card" id="paceCard">
+    <div class="pace-card-title">Daily Pace<br>Calculator</div>
+    <div class="pace-if-label">If I do</div>
+    <div class="pace-input-row">
+        <input class="pace-input" id="paceInput" type="number" min="1" placeholder="—" />
+        <span class="pace-per-day">/ day</span>
+    </div>
+    <div class="pace-result-box" id="paceResult">—</div>
+    <hr class="pace-divider">
+    <div class="pace-hints" id="paceHints">
+        7-day avg: <strong id="paceAvg7">—</strong><br>
+        Today so far: <strong id="paceTodaySoFar">0</strong>
+    </div>
+    <span class="pace-hint-btn" onclick="resetPaceInput()">↺ Reset to 7-day avg</span>
+</div><!-- /pace-card -->
+
+</div><!-- /right-col -->
 
 </div><!-- /page-cols -->
 
@@ -1332,7 +1524,7 @@ function updateGrandCard(liveTotalOverride) {
 
     // --- DOM updates ---
     document.getElementById('grandDoneNum').textContent = totalDone.toLocaleString('en-IN');
-    document.getElementById('grandPct').textContent     = `(${pct < 0.01 ? pct.toFixed(4) : pct < 1 ? pct.toFixed(2) : pct.toFixed(1)}%)`;
+    document.getElementById('grandPct').textContent     = `(${pct.toFixed(2)}%)`;
     document.getElementById('grandBarFill').style.width = Math.max(0.03, pct) + '%';
 
     const etaEl = document.getElementById('grandEta');
@@ -1340,10 +1532,14 @@ function updateGrandCard(liveTotalOverride) {
         etaEl.innerHTML = `<span class="grand-eta-date">🎉 1 Crore Complete! Jai Radha!</span>`;
         updateMilestones(totalDone);
         updateGame10k(totalDone);
+        updateBlockCountdowns(totalDone);
+        updatePaceCalc(totalDone);
         return;
     }
     if (avgPerDay < 1) {
         etaEl.textContent = 'Start chanting to see your estimated completion date…';
+        updateBlockCountdowns(totalDone);
+        updatePaceCalc(totalDone);
         return;
     }
 
@@ -1359,6 +1555,8 @@ function updateGrandCard(liveTotalOverride) {
 
     updateMilestones(totalDone);
     updateGame10k(totalDone);
+    updateBlockCountdowns(totalDone);
+    updatePaceCalc(totalDone);
 }
 
 // Returns oldest past-date with an unfulfilled manual target, or null
@@ -1704,6 +1902,9 @@ const GAME_10K       = 10000;
 const GAME_RING_CIRC = 2 * Math.PI * 25; // r=25 → ≈157.08
 let game10kPrevBlock = -1;               // -1 so first load never celebrates
 
+// Pace calculator state
+let paceUserEdited = false;
+
 const RISE_RATIO    = 1.8;   // fastEMA must be 1.8× ambient (lower = more sensitive)
 const FALL_RATIO    = 1.4;   // re-arm when fastEMA drops to 1.4× ambient
 const MIN_ABS       = 0.003; // absolute floor — very low so any mic works
@@ -1935,6 +2136,86 @@ function resetAll() {
 }
 
 // ════════════════════════════════════════════════════════
+// BLOCK COUNTDOWNS  (25K / 50K / 100K cycling bars)
+// ════════════════════════════════════════════════════════
+function updateBlockCountdowns(total) {
+    const blocks = [
+        { size: 25000,  fillId: 'b25kFill',  remId: 'b25kRem'  },
+        { size: 50000,  fillId: 'b50kFill',  remId: 'b50kRem'  },
+        { size: 100000, fillId: 'b100kFill', remId: 'b100kRem' },
+    ];
+    for (const b of blocks) {
+        const inBlock = total % b.size;
+        const rem     = b.size - inBlock;
+        const pct     = (inBlock / b.size) * 100;
+        const fillEl  = document.getElementById(b.fillId);
+        const remEl   = document.getElementById(b.remId);
+        if (fillEl) fillEl.style.width = pct + '%';
+        if (remEl)  remEl.textContent  = rem.toLocaleString('en-IN');
+    }
+}
+
+// ════════════════════════════════════════════════════════
+// PACE CALCULATOR
+// Dynamic default: 7-day rolling average of completed days.
+// User can type any number; clicking "Reset" restores the avg.
+// ════════════════════════════════════════════════════════
+function getPace7dayAvg() {
+    const hist  = loadHistory();
+    const today = todayKey();
+    const keys7 = Object.keys(hist).filter(k => k < today).sort().slice(-7);
+    if (!keys7.length) return 0;
+    return Math.round(keys7.reduce((s, k) => s + (hist[k] || 0), 0) / keys7.length);
+}
+
+function updatePaceCalc(total) {
+    const hist     = loadHistory();
+    const today    = todayKey();
+    const todayN   = hist[today] || 0;
+    const avg7     = getPace7dayAvg();
+
+    // Auto-fill input with 7-day avg when user hasn't edited it manually
+    const inp = document.getElementById('paceInput');
+    if (inp && !paceUserEdited && avg7 > 0) inp.value = avg7;
+
+    const pace = inp ? (parseInt(inp.value, 10) || avg7 || 1) : 1;
+    computePaceResult(total, pace);
+
+    const avg7El  = document.getElementById('paceAvg7');
+    const todayEl = document.getElementById('paceTodaySoFar');
+    if (avg7El)  avg7El.textContent  = avg7 > 0 ? avg7.toLocaleString('en-IN') + '/day' : '—';
+    if (todayEl) todayEl.textContent = todayN.toLocaleString('en-IN');
+}
+
+function computePaceResult(total, pace) {
+    const el = document.getElementById('paceResult');
+    if (!el) return;
+    if (!pace || pace < 1) { el.innerHTML = '—'; return; }
+    const remaining = Math.max(0, GRAND_TARGET - total);
+    if (remaining <= 0) {
+        el.innerHTML = '<span class="pace-days">🎉 Complete!</span>';
+        return;
+    }
+    const daysLeft   = Math.ceil(remaining / pace);
+    const finishMs   = new Date().setHours(0,0,0,0) + daysLeft * 86400000;
+    const finishDate = new Date(finishMs);
+    const dateLabel  = finishDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const months     = (daysLeft / 30.44).toFixed(1);
+    el.innerHTML =
+        `<span class="pace-days">${daysLeft.toLocaleString('en-IN')} days</span>` +
+        `<span class="pace-date">${dateLabel}</span>` +
+        `<span class="pace-months">(~${months} months)</span>`;
+}
+
+function resetPaceInput() {
+    paceUserEdited = false;
+    const inp = document.getElementById('paceInput');
+    const avg7 = getPace7dayAvg();
+    if (inp && avg7 > 0) inp.value = avg7;
+    computePaceResult(savedGrandTotal + unsavedCount, avg7 || 1);
+}
+
+// ════════════════════════════════════════════════════════
 // GRAFFITI CELEBRATION  (fires once when 10 Lakh is first hit)
 // ════════════════════════════════════════════════════════
 function showGraffiti() {
@@ -2116,6 +2397,16 @@ updateGrandCard();
 updateBackfillBanner();
 // Show restore modal if history is empty
 checkAndMaybeShowRestore();
+
+// Pace calculator input listeners
+const _paceInp = document.getElementById('paceInput');
+if (_paceInp) {
+    _paceInp.addEventListener('input', () => {
+        paceUserEdited = true;
+        computePaceResult(savedGrandTotal + unsavedCount, parseInt(_paceInp.value, 10) || 1);
+    });
+    _paceInp.addEventListener('focus', () => { paceUserEdited = true; });
+}
 
 // ════════════════════════════════════════════════════════
 // RESTORE FROM BACKUP FILE
