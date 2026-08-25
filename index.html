@@ -817,49 +817,64 @@
         }
         .ring-fill.pulsing { animation: ringPulse 1.4s ease-in-out infinite; }
 
-        /* ── Block countdown rows (25K / 50K / 100K) ── */
-        .block-rows { margin-top: 6px; }
-        .block-row {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            margin-bottom: 7px;
-        }
-        .block-row:last-child { margin-bottom: 0; }
-        .block-label {
-            font-size: 0.55rem;
-            color: rgba(255,140,0,0.7);
-            letter-spacing: 0.5px;
-            font-weight: 700;
-            width: 30px;
-            flex-shrink: 0;
-            text-align: left;
+        /* ── Block countdown cards (25K / 50K / 100K) ── */
+        .block-mini-header {
+            font-size: 0.52rem;
+            color: rgba(255,80,0,0.55);
+            letter-spacing: 2.5px;
             font-family: 'Courier New', Courier, monospace;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .block-mini-num {
+            font-size: 1.55rem;
+            font-weight: 700;
+            color: #ff8c00;
+            font-family: 'Courier New', Courier, monospace;
+            text-shadow: 0 0 16px rgba(255,140,0,0.65);
+            letter-spacing: -1px;
+            line-height: 1;
+        }
+        .block-mini-sub {
+            font-size: 0.46rem;
+            color: rgba(255,140,0,0.35);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
         }
         .block-bar-bg {
-            flex: 1;
-            height: 5px;
+            width: 100%;
+            height: 8px;
             background: rgba(255,60,0,0.1);
-            border-radius: 2px;
+            border-radius: 3px;
             overflow: hidden;
-            border: 1px solid rgba(255,80,0,0.15);
+            border: 1px solid rgba(255,80,0,0.18);
         }
         .block-bar-fill {
             height: 100%;
-            background: linear-gradient(90deg, #ff2200, #ff8c00);
-            border-radius: 2px;
+            background: linear-gradient(90deg, #ff2200, #ff9000);
+            border-radius: 3px;
             width: 0%;
-            transition: width 0.4s ease;
-            box-shadow: 0 0 5px rgba(255,100,0,0.6);
+            transition: width 0.5s ease;
+            box-shadow: 0 0 7px rgba(255,100,0,0.7);
         }
-        .block-rem {
-            font-size: 0.52rem;
-            color: rgba(255,140,0,0.75);
-            font-weight: 700;
-            width: 44px;
-            flex-shrink: 0;
-            text-align: right;
+        .block-mini-footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+        }
+        .block-mini-done-lbl {
+            font-size: 0.5rem;
+            color: rgba(255,140,0,0.35);
             font-family: 'Courier New', Courier, monospace;
+            letter-spacing: 0.5px;
+        }
+        .block-mini-pct {
+            font-size: 0.5rem;
+            color: rgba(255,140,0,0.5);
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 700;
         }
 
         /* ── Right column wrapper ── */
@@ -1191,24 +1206,36 @@
   </div>
 
   <!-- Block Countdowns: 25K / 50K / 100K -->
-  <div class="milestone-card" id="blockCard">
-    <div class="milestone-card-title">Next Targets</div>
-    <div class="block-rows">
-      <div class="block-row">
-        <span class="block-label">25K</span>
-        <div class="block-bar-bg"><div class="block-bar-fill" id="b25kFill"></div></div>
-        <span class="block-rem" id="b25kRem">25,000</span>
-      </div>
-      <div class="block-row">
-        <span class="block-label">50K</span>
-        <div class="block-bar-bg"><div class="block-bar-fill" id="b50kFill"></div></div>
-        <span class="block-rem" id="b50kRem">50,000</span>
-      </div>
-      <div class="block-row">
-        <span class="block-label">100K</span>
-        <div class="block-bar-bg"><div class="block-bar-fill" id="b100kFill"></div></div>
-        <span class="block-rem" id="b100kRem">1,00,000</span>
-      </div>
+  <div class="milestone-card" id="blockCard25k">
+    <div class="block-mini-header">▸ Next 25K</div>
+    <div class="block-mini-num" id="b25kBig">25,000</div>
+    <div class="block-mini-sub">remaining</div>
+    <div class="block-bar-bg"><div class="block-bar-fill" id="b25kFill"></div></div>
+    <div class="block-mini-footer">
+      <span class="block-mini-done-lbl" id="b25kDone">0 done</span>
+      <span class="block-mini-pct" id="b25kPct">0%</span>
+    </div>
+  </div>
+
+  <div class="milestone-card" id="blockCard50k">
+    <div class="block-mini-header">▸ Next 50K</div>
+    <div class="block-mini-num" id="b50kBig">50,000</div>
+    <div class="block-mini-sub">remaining</div>
+    <div class="block-bar-bg"><div class="block-bar-fill" id="b50kFill"></div></div>
+    <div class="block-mini-footer">
+      <span class="block-mini-done-lbl" id="b50kDone">0 done</span>
+      <span class="block-mini-pct" id="b50kPct">0%</span>
+    </div>
+  </div>
+
+  <div class="milestone-card" id="blockCard100k">
+    <div class="block-mini-header">▸ Next 100K</div>
+    <div class="block-mini-num" id="b100kBig">1,00,000</div>
+    <div class="block-mini-sub">remaining</div>
+    <div class="block-bar-bg"><div class="block-bar-fill" id="b100kFill"></div></div>
+    <div class="block-mini-footer">
+      <span class="block-mini-done-lbl" id="b100kDone">0 done</span>
+      <span class="block-mini-pct" id="b100kPct">0%</span>
     </div>
   </div>
 
@@ -2140,18 +2167,22 @@ function resetAll() {
 // ════════════════════════════════════════════════════════
 function updateBlockCountdowns(total) {
     const blocks = [
-        { size: 25000,  fillId: 'b25kFill',  remId: 'b25kRem'  },
-        { size: 50000,  fillId: 'b50kFill',  remId: 'b50kRem'  },
-        { size: 100000, fillId: 'b100kFill', remId: 'b100kRem' },
+        { size: 25000,  fillId: 'b25kFill',  bigId: 'b25kBig',  pctId: 'b25kPct',  doneId: 'b25kDone'  },
+        { size: 50000,  fillId: 'b50kFill',  bigId: 'b50kBig',  pctId: 'b50kPct',  doneId: 'b50kDone'  },
+        { size: 100000, fillId: 'b100kFill', bigId: 'b100kBig', pctId: 'b100kPct', doneId: 'b100kDone' },
     ];
     for (const b of blocks) {
         const inBlock = total % b.size;
         const rem     = b.size - inBlock;
         const pct     = (inBlock / b.size) * 100;
         const fillEl  = document.getElementById(b.fillId);
-        const remEl   = document.getElementById(b.remId);
-        if (fillEl) fillEl.style.width = pct + '%';
-        if (remEl)  remEl.textContent  = rem.toLocaleString('en-IN');
+        const bigEl   = document.getElementById(b.bigId);
+        const pctEl   = document.getElementById(b.pctId);
+        const doneEl  = document.getElementById(b.doneId);
+        if (fillEl) fillEl.style.width = pct.toFixed(1) + '%';
+        if (bigEl)  bigEl.textContent  = rem.toLocaleString('en-IN');
+        if (pctEl)  pctEl.textContent  = pct.toFixed(1) + '%';
+        if (doneEl) doneEl.textContent = inBlock.toLocaleString('en-IN') + ' done';
     }
 }
 
