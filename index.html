@@ -469,7 +469,6 @@
         @media (max-width: 900px) {
             .page-cols { flex-direction: column; align-items: center; }
             .right-col { position: static; flex: none; width: 100%; }
-            .pace-card  { display: none; }
             .grand-card {
                 position: fixed;
                 right: auto; left: 0;
@@ -890,75 +889,6 @@
         }
 
         /* ── Pace calculator card ── */
-        .pace-card {
-            background: rgba(18, 4, 36, 0.92);
-            border: 1px solid rgba(255,215,0,0.18);
-            border-radius: 18px;
-            padding: 16px 14px 14px;
-            text-align: center;
-            backdrop-filter: blur(20px);
-            box-shadow: 0 0 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
-        }
-        .pace-card-title {
-            font-size: 0.58rem;
-            color: rgba(255,215,0,0.5);
-            letter-spacing: 2.5px;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            line-height: 1.9;
-        }
-        .pace-basis-row {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            margin-bottom: 12px;
-        }
-        .pace-basis-lbl {
-            font-size: 0.55rem;
-            color: rgba(255,255,255,0.32);
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-        .pace-basis-val {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #ffd700;
-            text-shadow: 0 0 16px rgba(255,215,0,0.5);
-            letter-spacing: 1px;
-        }
-        .pace-result-box {
-            min-height: 50px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 10px;
-        }
-        .pace-days  { font-size: 1.3rem; font-weight: 700; color: #ffd700; text-shadow: 0 0 20px rgba(255,215,0,0.5); line-height: 1.1; }
-        .pace-date  { font-size: 0.76rem; color: rgba(255,215,0,0.85); font-weight: 700; margin-top: 2px; display: block; }
-        .pace-months{ font-size: 0.58rem; color: rgba(255,215,0,0.42); margin-top: 2px; display: block; }
-        .pace-divider { border: none; border-top: 1px solid rgba(255,215,0,0.1); margin: 8px 0; }
-        .pace-hints {
-            font-size: 0.57rem;
-            color: rgba(255,255,255,0.32);
-            letter-spacing: 0.3px;
-            line-height: 2;
-            text-align: left;
-        }
-        .pace-hints strong { color: rgba(255,215,0,0.65); font-weight: 600; }
-        .pace-hint-btn {
-            margin-top: 8px;
-            font-size: 0.55rem;
-            color: rgba(255,215,0,0.4);
-            cursor: pointer;
-            letter-spacing: 0.5px;
-            text-decoration: underline;
-            text-underline-offset: 2px;
-            display: block;
-        }
-        .pace-hint-btn:hover { color: rgba(255,215,0,0.75); }
-
         /* Mobile: milestone col becomes a horizontal strip above main content */
         @media (max-width: 900px) {
             .milestone-col {
@@ -1348,18 +1278,6 @@
     <div class="grand-eta" id="grandEta">—</div>
 </div><!-- /grand-card -->
 
-<div class="pace-card" id="paceCard">
-    <div class="pace-card-title">Daily Pace<br>Calculator</div>
-    <div class="pace-basis-row">
-        <span class="pace-basis-lbl">Based on your 7-day avg</span>
-        <span class="pace-basis-val" id="paceAvg7">—</span>
-    </div>
-    <div class="pace-result-box" id="paceResult">—</div>
-    <hr class="pace-divider">
-    <div class="pace-hints" id="paceHints">
-        Today so far: <strong id="paceTodaySoFar">0</strong>
-    </div>
-</div><!-- /pace-card -->
 
 </div><!-- /right-col -->
 
@@ -1516,12 +1434,8 @@ function saveTarget(dateKey, rawVal) {
 function updateGrandCard(liveTotalOverride) {
     const totalDone = (liveTotalOverride !== undefined) ? liveTotalOverride : savedGrandTotal;
 
-    // --- pace calculation ---
-    // Use earliest key in history or PACE_START, whichever is earlier
-    const hist    = loadHistory();
-    const keys    = Object.keys(hist).sort();
-    const startKey = (keys.length && keys[0] < PACE_START) ? keys[0] : PACE_START;
-    const [sy, sm, sd] = startKey.split('-').map(Number);
+    // --- pace calculation — use cached startKey (refreshed on save, not every tick) ---
+    const [sy, sm, sd] = cachedPaceStart.split('-').map(Number);
 
     const startMs   = new Date(sy, sm - 1, sd).setHours(0, 0, 0, 0);
     const todayMs   = new Date().setHours(0, 0, 0, 0);
@@ -1543,13 +1457,11 @@ function updateGrandCard(liveTotalOverride) {
         updateMilestones(totalDone);
         updateGame10k(totalDone);
         updateBlockCountdowns(totalDone);
-        updatePaceCalc(totalDone);
         return;
     }
     if (avgPerDay < 1) {
         etaEl.textContent = 'Start chanting to see your estimated completion date…';
         updateBlockCountdowns(totalDone);
-        updatePaceCalc(totalDone);
         return;
     }
 
@@ -1566,7 +1478,6 @@ function updateGrandCard(liveTotalOverride) {
     updateMilestones(totalDone);
     updateGame10k(totalDone);
     updateBlockCountdowns(totalDone);
-    updatePaceCalc(totalDone);
 }
 
 // Returns oldest past-date with an unfulfilled manual target, or null
@@ -1629,6 +1540,7 @@ function saveToHistory(n) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(hist));
     // Update cached grand total so addCount can pass a live value without re-reading localStorage
     savedGrandTotal = Object.values(hist).reduce((a, b) => a + b, 0);
+    refreshPaceCache(); // keep cachedPaceStart fresh after every write
     updateGrandCard();
     updateBackfillBanner();
     if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
@@ -1912,7 +1824,8 @@ const GAME_10K       = 10000;
 const GAME_RING_CIRC = 2 * Math.PI * 25; // r=25 → ≈157.08
 let game10kPrevBlock = -1;               // -1 so first load never celebrates
 
-// Pace calculator state
+// Cached ETA start key — recomputed once on startup and after each save
+let cachedPaceStart = '';
 
 const RISE_RATIO    = 1.8;   // fastEMA must be 1.8× ambient (lower = more sensitive)
 const FALL_RATIO    = 1.4;   // re-arm when fastEMA drops to 1.4× ambient
@@ -2168,52 +2081,12 @@ function updateBlockCountdowns(total) {
     }
 }
 
-// ════════════════════════════════════════════════════════
-// PACE CALCULATOR
-// Dynamic default: 7-day rolling average of completed days.
-// User can type any number; clicking "Reset" restores the avg.
-// ════════════════════════════════════════════════════════
-function getPace7dayAvg() {
+// Refreshes cachedPaceStart — call once at startup and after every saveToHistory
+// so updateGrandCard never needs to read localStorage on every tick.
+function refreshPaceCache() {
     const hist  = loadHistory();
-    const today = todayKey();
-    const keys7 = Object.keys(hist).filter(k => k < today).sort().slice(-7);
-    if (!keys7.length) return 0;
-    return Math.round(keys7.reduce((s, k) => s + (hist[k] || 0), 0) / keys7.length);
-}
-
-function updatePaceCalc(total) {
-    const hist    = loadHistory();
-    const today   = todayKey();
-    const todayN  = hist[today] || 0;
-    const avg7    = getPace7dayAvg();
-    const pace    = avg7 > 0 ? avg7 : Math.max(1, todayN);
-
-    computePaceResult(total, pace);
-
-    const avg7El  = document.getElementById('paceAvg7');
-    const todayEl = document.getElementById('paceTodaySoFar');
-    if (avg7El)  avg7El.textContent  = avg7 > 0 ? avg7.toLocaleString('en-IN') + ' / day' : '—';
-    if (todayEl) todayEl.textContent = todayN.toLocaleString('en-IN');
-}
-
-function computePaceResult(total, pace) {
-    const el = document.getElementById('paceResult');
-    if (!el) return;
-    if (!pace || pace < 1) { el.innerHTML = '—'; return; }
-    const remaining = Math.max(0, GRAND_TARGET - total);
-    if (remaining <= 0) {
-        el.innerHTML = '<span class="pace-days">🎉 Complete!</span>';
-        return;
-    }
-    const daysLeft   = Math.ceil(remaining / pace);
-    const finishMs   = new Date().setHours(0,0,0,0) + daysLeft * 86400000;
-    const finishDate = new Date(finishMs);
-    const dateLabel  = finishDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    const months     = (daysLeft / 30.44).toFixed(1);
-    el.innerHTML =
-        `<span class="pace-days">${daysLeft.toLocaleString('en-IN')} days</span>` +
-        `<span class="pace-date">${dateLabel}</span>` +
-        `<span class="pace-months">(~${months} months)</span>`;
+    const keys  = Object.keys(hist).sort();
+    cachedPaceStart = (keys.length && keys[0] < PACE_START) ? keys[0] : PACE_START;
 }
 
 // ════════════════════════════════════════════════════════
@@ -2392,6 +2265,7 @@ savedGrandTotal = Object.values(loadHistory()).reduce((a, b) => a + b, 0);
 m1mPhase2       = savedGrandTotal >= M1M;
 m1mGraffitShown = savedGrandTotal >= M1M;
 game10kPrevBlock = Math.floor(savedGrandTotal / GAME_10K);
+refreshPaceCache(); // prime cachedPaceStart once — updateGrandCard won't hit localStorage
 initMalaBeads();
 updateGrandCard();
 // Show backfill banner on page load if a pending target already exists
