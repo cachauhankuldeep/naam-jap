@@ -733,33 +733,6 @@
             line-height: 1.6;
         }
 
-        /* Panel lights (5L mala beads) */
-        .mala-beads {
-            display: flex;
-            justify-content: center;
-            gap: 5px;
-            margin-bottom: 9px;
-            flex-wrap: wrap;
-        }
-        .bead {
-            width: 28px;
-            height: 14px;
-            border-radius: 3px;
-            background: rgba(60, 10, 100, 0.2);
-            border: 1px solid rgba(160, 90, 255, 0.2);
-            transition: background 0.4s ease, box-shadow 0.4s ease, border-color 0.4s ease;
-        }
-        .bead.lit {
-            background: linear-gradient(180deg, #ffd700, #7c3aed);
-            border-color: rgba(255, 215, 0, 0.9);
-            box-shadow: 0 0 8px rgba(255,215,0,0.85), 0 0 18px rgba(124,58,237,0.5);
-        }
-        @keyframes beadPop {
-            0%   { transform: scaleX(0.3); }
-            70%  { transform: scaleX(1.12); }
-            100% { transform: scaleX(1); }
-        }
-        .bead.just-lit { animation: beadPop 0.3s cubic-bezier(0.34,1.56,0.64,1); }
 
         /* Tachometer ring (1M/20L) */
         /* ── Block countdown cards (25K / 50K / 100K) ── */
@@ -845,11 +818,9 @@
                 gap: 12px;
             }
             .milestone-card { flex: 1; }
-            .bead { width: 24px; height: 24px; }
         }
         @media (max-width: 520px) {
             .milestone-col { flex-direction: column; }
-            .bead { width: 28px; height: 28px; }
         }
 
         /* ── 10K Game Countdown card ── */
@@ -876,70 +847,6 @@
             font-weight: 600;
         }
 
-        /* ── Graffiti celebration overlay (10 Lakh milestone) ── */
-        .graffiti-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.9);
-            z-index: 500;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            gap: 16px;
-            cursor: pointer;
-            backdrop-filter: blur(8px);
-        }
-        .graffiti-overlay.show { display: flex; }
-        .graf-spray {
-            font-size: 3.6rem;
-            font-weight: 900;
-            text-transform: uppercase;
-            letter-spacing: 6px;
-            background: linear-gradient(135deg, #ff6b6b 0%, #ffd700 25%, #4ade80 50%, #60a5fa 75%, #a855f7 100%);
-            background-size: 300% 300%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: grafSplat 0.65s cubic-bezier(0.34,1.56,0.64,1) both,
-                       grafRainbow 2s linear infinite;
-            filter: drop-shadow(0 4px 24px rgba(255,215,0,0.5));
-            text-align: center;
-            padding: 0 16px;
-        }
-        @keyframes grafSplat {
-            0%   { transform: scale(0) rotate(-14deg); opacity: 0; }
-            65%  { transform: scale(1.16) rotate(2deg); opacity: 1; }
-            100% { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-        @keyframes grafRainbow {
-            0%   { background-position: 0% 50%; }
-            100% { background-position: 300% 50%; }
-        }
-        .graf-sub-text {
-            font-size: 1.05rem;
-            color: rgba(255,255,255,0.85);
-            letter-spacing: 4px;
-            text-transform: uppercase;
-            animation: grafFadeUp 0.7s ease 0.35s both;
-        }
-        .graf-emoji {
-            font-size: 2rem;
-            letter-spacing: 10px;
-            animation: grafFadeUp 0.7s ease 0.65s both;
-        }
-        .graf-dismiss {
-            font-size: 0.6rem;
-            color: rgba(255,255,255,0.25);
-            letter-spacing: 2.5px;
-            margin-top: 8px;
-            text-transform: uppercase;
-            animation: grafFadeUp 0.7s ease 1s both;
-        }
-        @keyframes grafFadeUp {
-            from { opacity: 0; transform: translateY(18px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
     </style>
 </head>
 <body>
@@ -986,27 +893,11 @@
 <input type="file" id="restoreFileInput" accept=".json" style="display:none"
        onchange="handleRestoreFileInput(this)">
 
-<!-- Graffiti celebration overlay (fires when 10 Lakh is first reached) -->
-<div class="graffiti-overlay" id="graffitiOverlay" onclick="hideGraffiti()">
-    <div class="graf-spray">JAI RADHA!</div>
-    <div class="graf-sub-text" id="grafSubText">10 LAKH COMPLETE!</div>
-    <div class="graf-emoji">🙏 🎊 ✨ 🌸 🎉</div>
-    <div class="graf-dismiss">Tap anywhere to continue</div>
-</div>
 
 <div class="page-cols">
 
 <!-- ── Far-left column: milestone trackers ── -->
 <div class="milestone-col" id="milestoneCol">
-
-  <!-- 500K — Mala Beads -->
-  <div class="milestone-card" id="m500k">
-    <div class="milestone-card-title">5 Lakh · Mala</div>
-    <div class="mala-beads" id="malaBeads"></div>
-    <span class="milestone-count" id="m500kCount">0</span>
-    <div class="milestone-sub" id="m500kSub">of 5,00,000</div>
-    <div class="milestone-sub" style="opacity:0.4;margin-top:3px;">● = 1 lakh</div>
-  </div>
 
   <!-- 10K Game Countdown -->
   <div class="milestone-card game10k-card" id="game10k">
@@ -1021,51 +912,6 @@
     <div class="block-mini-done-lbl game10k-round" style="text-align:center;margin-top:5px;" id="game10kRound">Round 1</div>
   </div>
 
-  <!-- Block Countdowns: 25K / 50K / 100K -->
-  <div class="milestone-card" id="blockCard25k">
-    <div class="block-mini-header">▸ Next 25K</div>
-    <div class="block-mini-num" id="b25kBig">25,000</div>
-    <div class="block-mini-sub">remaining</div>
-    <div class="block-bar-bg"><div class="block-bar-fill" id="b25kFill"></div></div>
-    <div class="block-mini-footer">
-      <span class="block-mini-done-lbl" id="b25kDone">0 done</span>
-      <span class="block-mini-pct" id="b25kPct">0%</span>
-    </div>
-  </div>
-
-  <div class="milestone-card" id="blockCard50k">
-    <div class="block-mini-header">▸ Next 50K</div>
-    <div class="block-mini-num" id="b50kBig">50,000</div>
-    <div class="block-mini-sub">remaining</div>
-    <div class="block-bar-bg"><div class="block-bar-fill" id="b50kFill"></div></div>
-    <div class="block-mini-footer">
-      <span class="block-mini-done-lbl" id="b50kDone">0 done</span>
-      <span class="block-mini-pct" id="b50kPct">0%</span>
-    </div>
-  </div>
-
-  <div class="milestone-card" id="blockCard100k">
-    <div class="block-mini-header">▸ Next 100K</div>
-    <div class="block-mini-num" id="b100kBig">1,00,000</div>
-    <div class="block-mini-sub">remaining</div>
-    <div class="block-bar-bg"><div class="block-bar-fill" id="b100kFill"></div></div>
-    <div class="block-mini-footer">
-      <span class="block-mini-done-lbl" id="b100kDone">0 done</span>
-      <span class="block-mini-pct" id="b100kPct">0%</span>
-    </div>
-  </div>
-
-  <!-- 10/20 Lakh Bar -->
-  <div class="milestone-card" id="m1m">
-    <div class="block-mini-header milestone-card-title">▸ 10 LAKH</div>
-    <div class="block-mini-num" id="m1mRem">10,00,000</div>
-    <div class="block-mini-sub">remaining</div>
-    <div class="block-bar-bg"><div class="block-bar-fill" id="m1mBarFill"></div></div>
-    <div class="block-mini-footer">
-      <span class="block-mini-done-lbl" id="m1mCount">0 done</span>
-      <span class="block-mini-pct" id="m1mPct">0%</span>
-    </div>
-  </div>
 
 </div>
 
@@ -1181,8 +1027,11 @@ let count            = 0;
 let target           = 0;
 let isListening      = false;
 let statsTimer       = null;
-let totalElapsed     = 0;
-let listenStartTime  = null;
+// Chant-activity timer — only counts seconds where chanting was detected
+let chantElapsed  = 0;       // accumulated ms from completed chant bursts
+let chantSegStart = null;    // Date.now() when current burst began
+let chantLastHit  = null;    // Date.now() of most recent count registration
+const CHANT_PAUSE = 4000;   // ms of silence before pausing the chant timer
 let creditedPerIndex = {};
 let targetReached    = false;
 let micStream        = null;
@@ -1230,18 +1079,27 @@ function highlight(text) {
 }
 
 // ════════════════════════════════════════════════════════
-// SESSION TIMER (only counts while listening)
+// CHANT-ACTIVITY TIMER
+// Only accumulates seconds when chanting is detected.
+// Pauses automatically after CHANT_PAUSE ms of silence.
 // ════════════════════════════════════════════════════════
 function getElapsed() {
-    if (listenStartTime) return totalElapsed + Math.floor((Date.now() - listenStartTime) / 1000);
-    return totalElapsed;
+    let ms = chantElapsed;
+    if (chantSegStart && chantLastHit) ms += chantLastHit - chantSegStart;
+    return Math.floor(ms / 1000);
 }
 
 function updateStats() {
+    // If in an active burst but silent for > CHANT_PAUSE, close the burst
+    if (chantSegStart && chantLastHit && Date.now() - chantLastHit > CHANT_PAUSE) {
+        chantElapsed += chantLastHit - chantSegStart;
+        chantSegStart = null;
+        chantLastHit  = null;
+    }
     const e = getElapsed();
     if (e === 0) return;
     const m = Math.floor(e / 60), s = e % 60;
-    document.getElementById('stats').textContent = `Session: ${m}m ${s < 10 ? '0'+s : s}s`;
+    document.getElementById('stats').textContent = `Chanting: ${m}m ${s < 10 ? '0'+s : s}s`;
 }
 
 // ════════════════════════════════════════════════════════
@@ -1302,11 +1160,6 @@ const _el = {};
 function _cacheEls() {
     ['grandDoneNum','grandPct','grandBarFill','grandEta',
      'game10kNum','game10kPct','game10kRound','game10kBarFill','game10kDone','game10kSub',
-     'b25kBig','b25kFill','b25kPct','b25kDone',
-     'b50kBig','b50kFill','b50kPct','b50kDone',
-     'b100kBig','b100kFill','b100kPct','b100kDone',
-     'm1mRem','m1mCount','m1mPct','m1mBarFill',
-     'm500kCount','m500kSub',
     ].forEach(id => { _el[id] = document.getElementById(id); });
 }
 
@@ -1369,14 +1222,11 @@ function updateGrandCard(liveTotalOverride) {
 
     if (totalDone >= GRAND_TARGET) {
         _el.grandEta.innerHTML = `<span class="grand-eta-date">🎉 1 Crore Complete! Jai Radha!</span>`;
-        updateMilestones(totalDone);
         updateGame10k(totalDone);
-        updateBlockCountdowns(totalDone);
         return;
     }
     if (avgPerDay < 1) {
         _el.grandEta.textContent = 'Start chanting to see your estimated completion date…';
-        updateBlockCountdowns(totalDone);
         return;
     }
 
@@ -1389,9 +1239,7 @@ function updateGrandCard(liveTotalOverride) {
         `<span class="grand-eta-date">${dateLabel}</span>` +
         `<span class="grand-eta-days"> · ${fmtIN(daysLeft)} days</span>`;
 
-    updateMilestones(totalDone);
     updateGame10k(totalDone);
-    updateBlockCountdowns(totalDone);
 }
 
 // Returns oldest past-date with an unfulfilled manual target, or null
@@ -1729,10 +1577,6 @@ let burstCtx      = null;
 let burstTimer    = null;
 let lastCountTime = 0;
 
-// 10L → 20L milestone state
-let m1mPhase2       = false; // true after 10L is first reached
-let m1mGraffitShown = false; // graffiti only fires once per session
-
 // 10K game countdown state
 const GAME_10K       = 10000;
 let game10kPrevBlock = -1;               // -1 so first load never celebrates
@@ -1851,6 +1695,11 @@ function addCount(n) {
     count += n;
     unsavedCount += n;
 
+    // Chant-activity timer: start or extend the current burst
+    const now = Date.now();
+    if (!chantSegStart) chantSegStart = now;
+    chantLastHit = now;
+
     clearTimeout(saveDebounce);
     if (getActiveBackfillDate()) {
         // Backfill active — save immediately so the banner count stays live-accurate
@@ -1888,9 +1737,9 @@ function showDebug(msg) {
 // CONTROLS
 // ════════════════════════════════════════════════════════
 function startListening() {
+    if (isListening) return; // guard against duplicate starts
     document.getElementById('errorBox').style.display = 'none';
     isListening     = true;
-    listenStartTime = Date.now();
     if (!statsTimer) statsTimer = setInterval(updateStats, 1000);
 
     if (useSR) {
@@ -1898,7 +1747,10 @@ function startListening() {
         srCycleCount = 0;
         if (!recognition) recognition = buildRecognition();
         if (!recognition) { isListening = false; showError('Speech recognition not supported. Use Google Chrome on desktop.'); return; }
-        try { recognition.start(); } catch(e) { showDebug('start threw: ' + e.message); }
+        try { recognition.start(); } catch(e) {
+            // "already started" is harmless — SR is already running, ignore silently
+            if (!e.message.includes('already started')) showDebug('start threw: ' + e.message);
+        }
     } else {
         // ALL mobile (iOS Safari, CriOS, Android Chrome): VAD burst detection
         // Counts voice onsets locally in <50ms — no cloud round-trip, no lag.
@@ -1922,9 +1774,11 @@ function startListening() {
 }
 
 function stopListening() {
-    if (listenStartTime) {
-        totalElapsed   += Math.floor((Date.now() - listenStartTime) / 1000);
-        listenStartTime = null;
+    // Flush any open chant burst
+    if (chantSegStart && chantLastHit) {
+        chantElapsed += chantLastHit - chantSegStart;
+        chantSegStart = null;
+        chantLastHit  = null;
     }
     isListening = false;
     permPending = false;
@@ -1946,8 +1800,9 @@ function resetAll() {
     count            = 0;
     target           = 0;
     targetReached    = false;
-    totalElapsed     = 0;
-    listenStartTime  = null;
+    chantElapsed  = 0;
+    chantSegStart = null;
+    chantLastHit  = null;
     creditedPerIndex = {};
     clearInterval(statsTimer);
     statsTimer   = null;
@@ -1971,28 +1826,6 @@ function resetAll() {
 }
 
 // ════════════════════════════════════════════════════════
-// BLOCK COUNTDOWNS  (25K / 50K / 100K cycling bars)
-// ════════════════════════════════════════════════════════
-function updateBlockCountdowns(total) {
-    const b25  = total % 25000,  r25  = 25000  - b25;
-    const b50  = total % 50000,  r50  = 50000  - b50;
-    const b100 = total % 100000, r100 = 100000 - b100;
-
-    _el.b25kBig.textContent    = fmtIN(r25);
-    _el.b25kFill.style.width   = (b25  / 250).toFixed(1)  + '%'; // /25000*100
-    _el.b25kPct.textContent    = (b25  / 250).toFixed(1)  + '%';
-    _el.b25kDone.textContent   = fmtIN(b25)  + ' done';
-
-    _el.b50kBig.textContent    = fmtIN(r50);
-    _el.b50kFill.style.width   = (b50  / 500).toFixed(1)  + '%'; // /50000*100
-    _el.b50kPct.textContent    = (b50  / 500).toFixed(1)  + '%';
-    _el.b50kDone.textContent   = fmtIN(b50)  + ' done';
-
-    _el.b100kBig.textContent   = fmtIN(r100);
-    _el.b100kFill.style.width  = (b100 / 1000).toFixed(1) + '%'; // /100000*100
-    _el.b100kPct.textContent   = (b100 / 1000).toFixed(1) + '%';
-    _el.b100kDone.textContent  = fmtIN(b100) + ' done';
-}
 
 // Refreshes cachedPaceStart — call once at startup and after every saveToHistory
 // so updateGrandCard never needs to read localStorage on every tick.
@@ -2000,20 +1833,6 @@ function refreshPaceCache() {
     const hist  = loadHistory();
     const keys  = Object.keys(hist).sort();
     cachedPaceStart = (keys.length && keys[0] < PACE_START) ? keys[0] : PACE_START;
-}
-
-// ════════════════════════════════════════════════════════
-// GRAFFITI CELEBRATION  (fires once when 10 Lakh is first hit)
-// ════════════════════════════════════════════════════════
-function showGraffiti() {
-    const el = document.getElementById('graffitiOverlay');
-    if (!el) return;
-    el.classList.add('show');
-    setTimeout(() => el.classList.remove('show'), 5500); // auto-dismiss after 5.5s
-}
-function hideGraffiti() {
-    const el = document.getElementById('graffitiOverlay');
-    if (el) el.classList.remove('show');
 }
 
 // ════════════════════════════════════════════════════════
@@ -2049,115 +1868,12 @@ function updateGame10k(total) {
     game10kPrevBlock = block;
 }
 
-// ════════════════════════════════════════════════════════
-// MILESTONE TRACKERS  (500K mala beads · 1M ring gauge)
-// ════════════════════════════════════════════════════════
-const M500K = 500000;
-const M1M   = 1000000;
-
-function initMalaBeads() {
-    const c = document.getElementById('malaBeads');
-    if (!c || c.children.length) return;
-    for (let i = 0; i < 5; i++) {
-        const b = document.createElement('div');
-        b.className = 'bead';
-        b.id = 'bead-' + i;
-        c.appendChild(b);
-    }
-}
-
-function updateMilestones(total) {
-    const card500 = document.getElementById('m500k');
-    const card1m  = document.getElementById('m1m');
-    const row     = document.getElementById('milestoneCol');
-    if (!row) return;
-
-    // ── 500K mala beads ──
-    if (card500 && !card500.classList.contains('done')) {
-        const lit = Math.min(5, Math.floor((total / M500K) * 5));
-        _el.m500kCount.textContent = fmtIN(Math.min(total, M500K));
-
-        for (let i = 0; i < 5; i++) {
-            const b = document.getElementById('bead-' + i);
-            if (!b) continue;
-            if (i < lit && !b.classList.contains('lit')) {
-                b.classList.add('lit', 'just-lit');
-                setTimeout(() => b.classList.remove('just-lit'), 450);
-            } else if (i >= lit) {
-                b.classList.remove('lit', 'just-lit');
-            }
-        }
-
-        if (total >= M500K) {
-            _el.m500kSub.textContent = '🎉 Jai Radha! 5 Lakh done!';
-            card500.style.borderColor = 'rgba(74,222,128,0.55)';
-            setTimeout(() => {
-                card500.classList.add('done');
-                card500.addEventListener('transitionend', () => { card500.style.display = 'none'; }, { once: true });
-            }, 2500);
-        } else {
-            _el.m500kSub.textContent = fmtIN(M500K - total) + ' to go';
-        }
-    }
-
-    // ── 10L / 20L bar — phases: 0→10L (phase 1) then 10L→20L (phase 2) ──
-    if (card1m && !card1m.classList.contains('done')) {
-        if (total < M1M) {
-            // Phase 1: tracking 0 → 10 Lakh
-            m1mPhase2 = false;
-            const pct = Math.min(1, total / M1M);
-            const pctStr = (pct * 100).toFixed(pct < 0.01 ? 2 : pct < 0.1 ? 1 : 0);
-            _el.m1mBarFill.style.width = (pct * 100).toFixed(1) + '%';
-            _el.m1mPct.textContent     = pctStr + '%';
-            _el.m1mRem.textContent     = fmtIN(M1M - total);
-            _el.m1mCount.textContent   = fmtIN(total) + ' done';
-
-        } else if (total < 2 * M1M) {
-            // Phase 2: 10L done — now tracking toward 20 Lakh
-            if (!m1mPhase2) {
-                m1mPhase2 = true;
-                const titleEl = card1m.querySelector('.milestone-card-title');
-                if (titleEl) titleEl.textContent = '▸ 20 LAKH';
-                if (!m1mGraffitShown) { m1mGraffitShown = true; showGraffiti(); }
-                card1m.style.borderColor = '';
-            }
-            const titleEl = card1m.querySelector('.milestone-card-title');
-            if (titleEl) titleEl.textContent = '▸ 20 LAKH';
-
-            const pct2 = Math.min(1, (total - M1M) / M1M);
-            const pctStr2 = (pct2 * 100).toFixed(pct2 < 0.01 ? 2 : pct2 < 0.1 ? 1 : 0);
-            _el.m1mBarFill.style.width = (pct2 * 100).toFixed(1) + '%';
-            _el.m1mPct.textContent     = pctStr2 + '%';
-            _el.m1mRem.textContent     = fmtIN(2 * M1M - total);
-            _el.m1mCount.textContent   = fmtIN(total) + ' done';
-
-        } else {
-            // Phase 3: 20L complete — fade out the card
-            _el.m1mRem.textContent = '🎉 Jai Radha!';
-            card1m.style.borderColor = 'rgba(74,222,128,0.55)';
-            setTimeout(() => {
-                card1m.classList.add('done');
-                card1m.addEventListener('transitionend', () => { card1m.style.display = 'none'; }, { once: true });
-            }, 2500);
-        }
-    }
-
-    // hide row when both cards are gone
-    if (card500 && card1m &&
-        card500.classList.contains('done') && card1m.classList.contains('done')) {
-        row.style.display = 'none';
-    }
-}
 
 // Initialise cached grand total and paint the card on page load
 savedGrandTotal = Object.values(loadHistory()).reduce((a, b) => a + b, 0);
-// Seed phase flags from saved total so no celebrations fire on page reload
-m1mPhase2       = savedGrandTotal >= M1M;
-m1mGraffitShown = savedGrandTotal >= M1M;
 game10kPrevBlock = Math.floor(savedGrandTotal / GAME_10K);
 refreshPaceCache(); // prime cachedPaceStart once — updateGrandCard won't hit localStorage
 _cacheEls();       // cache all hot-path DOM nodes — avoids getElementById on every tick
-initMalaBeads();
 updateGrandCard();
 // Show backfill banner on page load if a pending target already exists
 updateBackfillBanner();
