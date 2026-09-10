@@ -993,8 +993,6 @@
     <div class="today-summary">
       <div class="today-summary-label">Today</div>
       <div class="today-summary-row">
-        <span class="today-val" id="todayCountEl">–</span>
-        <span class="today-sep">·</span>
         <span class="today-val" id="dailyChantTime">–</span>
       </div>
     </div>
@@ -1180,9 +1178,7 @@ function fmtDuration(secs) {
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
     const s = secs % 60;
-    if (h > 0) return `${h}h ${m < 10 ? '0'+m : m}m`;
-    if (m > 0) return `${m}m ${s < 10 ? '0'+s : s}s`;
-    return `${s}s`;
+    return `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
 }
 
 function flushDailyChantTime() {
@@ -1197,14 +1193,8 @@ function flushDailyChantTime() {
 }
 
 function updateTodaySummary() {
-    const timeEl  = document.getElementById('dailyChantTime');
-    const countEl = document.getElementById('todayCountEl');
-    if (timeEl)  timeEl.textContent  = dailyChantSecs > 0 ? fmtDuration(dailyChantSecs) : '–';
-    if (countEl) {
-        const hist = loadHistory();
-        const cnt  = (hist[todayKey()] || 0) + unsavedCount;
-        countEl.textContent = cnt > 0 ? fmtIN(cnt) : '–';
-    }
+    const timeEl = document.getElementById('dailyChantTime');
+    if (timeEl) timeEl.textContent = dailyChantSecs > 0 ? fmtDuration(dailyChantSecs) : '–';
 }
 
 function updateStats() {
