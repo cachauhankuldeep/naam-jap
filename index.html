@@ -255,7 +255,40 @@
         /* ── Round clock timer ── */
         .stats {
             display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .today-summary {
+            text-align: center;
+            background: #ffffff;
+            border: 1px solid rgba(26,94,82,0.18);
+            border-radius: 12px;
+            padding: 8px 18px;
+            box-shadow: 0 2px 10px rgba(26,94,82,0.07);
+        }
+        .today-summary-label {
+            font-size: 0.6rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            color: rgba(15,71,67,0.4);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+        .today-summary-row {
+            display: flex;
+            align-items: baseline;
             justify-content: center;
+            gap: 6px;
+        }
+        .today-val {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #4d9e8c;
+        }
+        .today-sep {
+            font-size: 0.75rem;
+            color: rgba(15,71,67,0.25);
         }
         .clock-ring {
             width: 120px;
@@ -957,6 +990,14 @@
       <span class="clock-label">Chanting</span>
       <span class="clock-time" id="clockTime">--:--</span>
     </div>
+    <div class="today-summary">
+      <div class="today-summary-label">Today</div>
+      <div class="today-summary-row">
+        <span class="today-val" id="todayCountEl">–</span>
+        <span class="today-sep">·</span>
+        <span class="today-val" id="dailyChantTime">–</span>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -1076,6 +1117,8 @@ let chantElapsed  = 0;       // accumulated ms from completed chant bursts
 let chantSegStart = null;    // Date.now() when current burst began
 let chantLastHit  = null;    // Date.now() of most recent count registration
 const CHANT_PAUSE = 4000;   // ms of silence before pausing the chant timer
+let dailyChantSecs     = 0;  // total chanting seconds for today, survives resets
+let sessionFlushedSecs = 0;  // how much of this session we've already added to dailyChantSecs
 let creditedPerIndex = {};
 let targetReached    = false;
 let micStream        = null;
@@ -1133,6 +1176,37 @@ function getElapsed() {
     return Math.floor(ms / 1000);
 }
 
+function fmtDuration(secs) {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    if (h > 0) return `${h}h ${m < 10 ? '0'+m : m}m`;
+    if (m > 0) return `${m}m ${s < 10 ? '0'+s : s}s`;
+    return `${s}s`;
+}
+
+function flushDailyChantTime() {
+    const secs = getElapsed();
+    const delta = secs - sessionFlushedSecs;
+    if (delta > 0) {
+        dailyChantSecs += delta;
+        sessionFlushedSecs = secs;
+        localStorage.setItem('radha_jap_chant_time_' + todayKey(), dailyChantSecs);
+    }
+    updateTodaySummary();
+}
+
+function updateTodaySummary() {
+    const timeEl  = document.getElementById('dailyChantTime');
+    const countEl = document.getElementById('todayCountEl');
+    if (timeEl)  timeEl.textContent  = dailyChantSecs > 0 ? fmtDuration(dailyChantSecs) : '–';
+    if (countEl) {
+        const hist = loadHistory();
+        const cnt  = (hist[todayKey()] || 0) + unsavedCount;
+        countEl.textContent = cnt > 0 ? fmtIN(cnt) : '–';
+    }
+}
+
 function updateStats() {
     // If in an active burst but silent for > CHANT_PAUSE, close the burst
     if (chantSegStart && chantLastHit && Date.now() - chantLastHit > CHANT_PAUSE) {
@@ -1141,12 +1215,13 @@ function updateStats() {
         chantLastHit  = null;
     }
     const e = getElapsed();
-    if (e === 0) return;
-    const m = Math.floor(e / 60), s = e % 60;
     const ct = document.getElementById('clockTime');
     const cr = document.getElementById('clockRing');
+    if (e === 0) { if (ct) ct.textContent = '--:--'; return; }
+    const m = Math.floor(e / 60), s = e % 60;
     if (ct) ct.textContent = `${m}:${s < 10 ? '0'+s : s}`;
     if (cr) cr.classList.toggle('active', e > 0);
+    flushDailyChantTime();
 }
 
 // ════════════════════════════════════════════════════════
@@ -1352,6 +1427,7 @@ function saveToHistory(n) {
     refreshPaceCache(); // keep cachedPaceStart fresh after every write
     updateGrandCard();
     updateBackfillBanner();
+    updateTodaySummary();
     if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
 }
 
@@ -1836,6 +1912,7 @@ function stopListening() {
     // iOS: keep micStream alive — releasing it triggers a new permission dialog next time
     if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
     clearTimeout(saveDebounce);
+    flushDailyChantTime();
     setUI(false);
     updateStats();
     if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
@@ -1847,10 +1924,11 @@ function resetAll() {
     count            = 0;
     target           = 0;
     targetReached    = false;
-    chantElapsed  = 0;
-    chantSegStart = null;
-    chantLastHit  = null;
-    creditedPerIndex = {};
+    chantElapsed       = 0;
+    chantSegStart      = null;
+    chantLastHit       = null;
+    sessionFlushedSecs = 0;  // new session starts from 0, but dailyChantSecs persists
+    creditedPerIndex   = {};
     clearInterval(statsTimer);
     statsTimer   = null;
     recognition  = null;
@@ -1929,6 +2007,11 @@ updateGrandCard();
 updateBackfillBanner();
 // Show restore modal if history is empty
 checkAndMaybeShowRestore();
+// Load today's accumulated chanting time from localStorage
+dailyChantSecs = parseInt(localStorage.getItem('radha_jap_chant_time_' + todayKey()) || '0', 10);
+updateTodaySummary();
+// Flush daily chant time before the page closes
+window.addEventListener('beforeunload', flushDailyChantTime);
 
 
 // ════════════════════════════════════════════════════════
