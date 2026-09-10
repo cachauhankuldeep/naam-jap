@@ -1236,10 +1236,10 @@ function updateProgress() {
     if (!target) return;
     const pct = Math.min(100, Math.round((count / target) * 100));
     document.getElementById('progressFill').style.width = pct + '%';
-    document.getElementById('progressLeft').textContent = count.toLocaleString('en-IN');
+    document.getElementById('progressLeft').textContent = fmtIN(count);
     document.getElementById('progressPct').textContent  = pct + '%';
-    document.getElementById('progressRight').textContent = target.toLocaleString('en-IN');
-    document.getElementById('countOfTarget').textContent = `of ${target.toLocaleString('en-IN')}`;
+    document.getElementById('progressRight').textContent = fmtIN(target);
+    document.getElementById('countOfTarget').textContent = `of ${fmtIN(target)}`;
 
     if (count >= target && !targetReached) {
         targetReached = true;
@@ -1259,16 +1259,28 @@ function todayKey() {
 }
 
 // ── Fast Indian number formatter ─────────────────────────
-// Avoids Intl/toLocaleString overhead on every count tick.
-// Example: 1500000 → "15,00,000"
+// Fast Western number formatter: 1500000 → "1,500,000"
 function fmtIN(n) {
     n = Math.round(n);
     if (n < 0) return '-' + fmtIN(-n);
-    const s = String(n);
-    if (s.length <= 3) return s;
-    const last3 = s.slice(-3);
-    const rest   = s.slice(0, -3);
-    return rest.replace(/\B(?=(\d{2})+(?!\d))/g, ',') + ',' + last3;
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// Dynamic font sizing — keeps numbers within their fixed-width cards as digits grow.
+// Card inner width: 320px - 104px padding = 216px. Each char ≈ font×16×0.55px.
+const _FONT_SIZES = [6, 6, 6, 6, 4.5, 3.8, 3.0, 2.5, 2.0, 1.7, 1.5];
+function fitCountFont() {
+    const el = document.getElementById('countDisplay');
+    if (!el) return;
+    const digits = count > 0 ? (Math.floor(Math.log10(count)) + 1) : 1;
+    el.style.fontSize = (_FONT_SIZES[Math.min(digits, _FONT_SIZES.length - 1)] || 1.5) + 'rem';
+}
+function fitGame10kFont(rem) {
+    const el = _el.game10kNum;
+    if (!el) return;
+    const digits = rem > 0 ? (Math.floor(Math.log10(rem)) + 1) : 1;
+    // 1K card max is 1,000 (4 digits → 4.5rem)
+    el.style.fontSize = (_FONT_SIZES[Math.min(digits, 4)] || 4.5) + 'rem';
 }
 
 // ── DOM element cache ─────────────────────────────────────
@@ -1349,7 +1361,7 @@ function updateGrandCard(liveTotalOverride) {
 
     const daysLeft   = Math.ceil(remaining / avgPerDay);
     const finishDate = new Date(todayMs + daysLeft * 86400000);
-    const dateLabel  = finishDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const dateLabel  = finishDate.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 
     _el.grandEta.innerHTML =
         `~${fmtIN(Math.round(avgPerDay))}/day avg<br>` +
@@ -1382,8 +1394,8 @@ function updateBackfillBanner() {
         const need     = tgt - done;
         const [dy, dm, dd] = dk.split('-');
         const label    = new Date(+dy, +dm-1, +dd)
-                           .toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-        el.textContent = `🔄 Filling ${label} target · ${done.toLocaleString('en-IN')} / ${tgt.toLocaleString('en-IN')} · ${need.toLocaleString('en-IN')} more to go`;
+                           .toLocaleDateString('en-US', { day: '2-digit', month: 'short' });
+        el.textContent = `🔄 Filling ${label} target · ${fmtIN(done)} / ${fmtIN(tgt)} · ${fmtIN(need)} more to go`;
         el.style.display = 'block';
     } else {
         el.style.display = 'none';
@@ -1466,7 +1478,7 @@ function renderHistory() {
             <div class="month-header" onclick="toggleMonth('${mk}')">
                 <span class="month-name">${monthLabel}</span>
                 <span style="display:flex;align-items:center;gap:10px">
-                    <span class="month-total">${monthTotal.toLocaleString('en-IN')}</span>
+                    <span class="month-total">${fmtIN(monthTotal)}</span>
                     <span class="month-arrow" id="marrow-${mk}">▼</span>
                 </span>
             </div>
@@ -1477,7 +1489,7 @@ function renderHistory() {
         for (const dk of days) {
             const [dy, dm, dd] = dk.split('-');
             const dateObj  = new Date(parseInt(dy), parseInt(dm)-1, parseInt(dd));
-            const dayName  = dateObj.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+            const dayName  = dateObj.toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short' });
             const isToday  = dk === today;
             const done     = hist[dk] || 0;
             const tgt      = targets[dk] || 0;
@@ -1510,7 +1522,7 @@ function renderHistory() {
                     badge = `<span class="day-fulfilled">✓ done</span>`;
                 } else {
                     const need = tgt - done;
-                    badge = `<span class="day-shortfall">needs ${need.toLocaleString('en-IN')}</span>`;
+                    badge = `<span class="day-shortfall">needs ${fmtIN(need)}</span>`;
                 }
             }
 
@@ -1518,7 +1530,7 @@ function renderHistory() {
                 <span class="day-name">${isToday ? '📅 Today · ' : ''}${dayName}</span>
                 ${targetCell}
                 <span class="day-count-cell">
-                    <span class="day-count">${done.toLocaleString('en-IN')}</span>
+                    <span class="day-count">${fmtIN(done)}</span>
                     ${badge}
                 </span>
             </div>`;
@@ -1648,7 +1660,7 @@ function buildRecognition() {
                     document.getElementById('dot').style.boxShadow = '0 0 10px #f59e0b';
                     document.getElementById('statusText').textContent = '⚠️ Click Allow in browser bar ↑';
                     // Show prominent modal
-                    document.getElementById('permCountDisplay').textContent = count.toLocaleString('en-IN');
+                    document.getElementById('permCountDisplay').textContent = fmtIN(count);
                     document.getElementById('permModal').classList.add('show');
                     // Independent interval — retries rec.start() every 800ms regardless of onend
                     permRetryInterval = setInterval(() => {
@@ -1830,7 +1842,8 @@ function addCount(n) {
     }
 
     const el = document.getElementById('countDisplay');
-    el.textContent = count.toLocaleString('en-IN');
+    el.textContent = fmtIN(count);
+    fitCountFont();
     // Flash without forcing a synchronous reflow
     el.style.transform = 'scale(1.2)';
     el.style.color = '#ffffff';
@@ -1932,7 +1945,9 @@ function resetAll() {
     if (permRetryInterval) { clearInterval(permRetryInterval); permRetryInterval = null; }
     if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
 
-    document.getElementById('countDisplay').textContent = '0';
+    const cdEl = document.getElementById('countDisplay');
+    cdEl.textContent = '0';
+    cdEl.style.fontSize = '6rem';
     document.getElementById('countOfTarget').textContent = '';
     document.getElementById('targetInput').value = '';
     document.getElementById('progressWrap').classList.remove('visible');
@@ -1968,6 +1983,7 @@ function updateGame10k(total) {
     const pct     = inBlock / GAME_10K;
 
     _el.game10kNum.textContent   = fmtIN(rem);
+    fitGame10kFont(rem);
     _el.game10kPct.textContent   = Math.round(pct * 100) + '%';
     _el.game10kRound.textContent = 'Round ' + (block + 1);
     _el.game10kDone.textContent  = fmtIN(inBlock) + ' done';
@@ -2069,7 +2085,7 @@ async function processRestoreData(file) {
         if (document.getElementById('historyPanel').classList.contains('open')) renderHistory();
         document.getElementById('restoreModal').classList.remove('show');
         setSaveStatus('✓ Data restored! Click 💾 to re-enable auto-save', 'warn');
-        alert('✅ Data restored successfully!\n\nTotal chants: ' + savedGrandTotal.toLocaleString('en-IN') + '\n\nNow click 💾 Set Auto-Save File to re-enable auto-saving.');
+        alert('✅ Data restored successfully!\n\nTotal chants: ' + fmtIN(savedGrandTotal) + '\n\nNow click 💾 Set Auto-Save File to re-enable auto-saving.');
     } catch {
         alert('Could not read the file.\nPlease pick your naam_jap_backup.json backup file.');
     }
@@ -2148,7 +2164,7 @@ async function doAutoSave() {
         const writable = await autoSaveHandle.createWritable();
         await writable.write(payload);
         await writable.close();
-        setSaveStatus('✓ Saved at ' + new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}), 'ok');
+        setSaveStatus('✓ Saved at ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}), 'ok');
     } catch {
         setSaveStatus('⚠️ Save failed — click button to re-enable', 'warn');
         autoSaveHandle = null;
