@@ -54,7 +54,8 @@
             margin-bottom: 16px;
             backdrop-filter: blur(12px);
             box-shadow: 0 2px 12px rgba(26,94,82,0.08), inset 0 1px 0 rgba(26,94,82,0.04);
-            min-width: 240px;
+            width: 320px;
+            overflow: hidden;
         }
         .count-label {
             font-size: 0.6rem;
@@ -69,6 +70,7 @@
             color: #4d9e8c;
             line-height: 1;
             text-shadow: none;
+            font-variant-numeric: tabular-nums;
             transition: transform 0.12s cubic-bezier(0.34,1.56,0.64,1), color 0.12s ease;
             user-select: none;
         }
@@ -894,6 +896,8 @@
         .game10k-card {
             border-color: rgba(26,94,82,0.5);
             padding: 28px 52px 24px;
+            width: 320px;
+            overflow: hidden;
         }
         .game10k-card.flash {
             border-color: rgba(26,94,82,0.9);
@@ -909,7 +913,7 @@
             color: #4d9e8c;
             transition: color 0.2s;
         }
-        .game10k-card .block-mini-num { font-size: 6rem; }
+        .game10k-card .block-mini-num { font-size: 6rem; font-variant-numeric: tabular-nums; }
         .game10k-card .block-mini-sub { font-size: 0.7rem; letter-spacing: 3px; }
         .game10k-card .block-bar-bg   { height: 10px; border-radius: 5px; }
         .game10k-card .block-bar-fill { border-radius: 5px; }
