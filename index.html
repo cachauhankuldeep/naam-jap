@@ -422,6 +422,7 @@
         .day-target-input::placeholder { color: rgba(15,71,67,0.2); }
         .day-count-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: 0 0 auto; }
         .day-count { color: rgba(15,71,67,0.7); font-weight: 600; }
+        .day-chant-time { font-size: 0.62rem; color: #4d9e8c; font-weight: 500; letter-spacing: 0.3px; }
         .day-shortfall { font-size: 0.62rem; color: #f59e0b; }
         .day-fulfilled { font-size: 0.62rem; color: #7cc4b4; }
 
@@ -1509,11 +1510,17 @@ function renderHistory() {
                 }
             }
 
+            const daySecs = isToday
+                ? dailyChantSecs
+                : parseInt(localStorage.getItem('radha_jap_chant_time_' + dk) || '0', 10);
+            const dayTimeStr = daySecs > 0 ? fmtDuration(daySecs) : '';
+
             html += `<div class="day-row">
                 <span class="day-name">${isToday ? '📅 Today · ' : ''}${dayName}</span>
                 ${targetCell}
                 <span class="day-count-cell">
                     <span class="day-count">${done.toLocaleString('en-IN')}</span>
+                    ${dayTimeStr ? `<span class="day-chant-time">⏱ ${dayTimeStr}</span>` : ''}
                     ${badge}
                 </span>
             </div>`;
