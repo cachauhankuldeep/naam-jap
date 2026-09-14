@@ -1122,6 +1122,7 @@ let chantLastHit  = null;    // Date.now() of most recent count registration
 const CHANT_PAUSE = 4000;   // ms of silence before pausing the chant timer
 let dailyChantSecs     = 0;  // total chanting seconds for today, survives resets
 let sessionFlushedSecs = 0;  // how much of this session we've already added to dailyChantSecs
+let dailyChantDate     = '';  // YYYY-MM-DD key for current day, set on init
 let creditedPerIndex = {};
 let targetReached    = false;
 let micStream        = null;
@@ -1186,13 +1187,31 @@ function fmtDuration(secs) {
     return `${h < 10 ? '0'+h : h}:${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
 }
 
+function checkDateRollover() {
+    const today = todayKey();
+    if (today === dailyChantDate) return;
+    // Midnight crossed — flush remaining seconds to the old day's key
+    const secs = getElapsed();
+    const delta = secs - sessionFlushedSecs;
+    if (delta > 0) {
+        dailyChantSecs += delta;
+        localStorage.setItem('radha_jap_chant_time_' + dailyChantDate, dailyChantSecs);
+    }
+    // Reset for the new day
+    dailyChantDate     = today;
+    sessionFlushedSecs = secs;  // already counted above; new delta starts from here
+    dailyChantSecs     = parseInt(localStorage.getItem('radha_jap_chant_time_' + today) || '0', 10);
+    updateTodaySummary();
+}
+
 function flushDailyChantTime() {
+    checkDateRollover();
     const secs = getElapsed();
     const delta = secs - sessionFlushedSecs;
     if (delta > 0) {
         dailyChantSecs += delta;
         sessionFlushedSecs = secs;
-        localStorage.setItem('radha_jap_chant_time_' + todayKey(), dailyChantSecs);
+        localStorage.setItem('radha_jap_chant_time_' + dailyChantDate, dailyChantSecs);
     }
     updateTodaySummary();
 }
@@ -2019,8 +2038,11 @@ updateBackfillBanner();
 // Show restore modal if history is empty
 checkAndMaybeShowRestore();
 // Load today's accumulated chanting time from localStorage
-dailyChantSecs = parseInt(localStorage.getItem('radha_jap_chant_time_' + todayKey()) || '0', 10);
+dailyChantDate = todayKey();
+dailyChantSecs = parseInt(localStorage.getItem('radha_jap_chant_time_' + dailyChantDate) || '0', 10);
 updateTodaySummary();
+// Catch midnight rollover even if the page is idle (checked every 60 s)
+setInterval(checkDateRollover, 60000);
 // Flush daily chant time before the page closes
 window.addEventListener('beforeunload', flushDailyChantTime);
 
