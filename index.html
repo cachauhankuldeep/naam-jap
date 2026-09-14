@@ -996,7 +996,10 @@
       <span class="clock-time" id="clockTime">--:--</span>
     </div>
     <div class="today-summary">
-      <div class="today-summary-label">Today</div>
+      <div class="today-summary-label" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+        Today
+        <button onclick="resetDailyChantTime()" title="Reset today's timer" style="background:none;border:none;cursor:pointer;color:rgba(15,71,67,0.35);font-size:0.7rem;padding:0;line-height:1;" onmouseover="this.style.color='#4d9e8c'" onmouseout="this.style.color='rgba(15,71,67,0.35)'">✕</button>
+      </div>
       <div class="today-summary-row">
         <span class="today-val" id="dailyChantTime">–</span>
       </div>
@@ -1219,6 +1222,13 @@ function flushDailyChantTime() {
 function updateTodaySummary() {
     const timeEl = document.getElementById('dailyChantTime');
     if (timeEl) timeEl.textContent = dailyChantSecs > 0 ? fmtDuration(dailyChantSecs) : '–';
+}
+
+function resetDailyChantTime() {
+    dailyChantSecs     = 0;
+    sessionFlushedSecs = getElapsed();
+    localStorage.removeItem('radha_jap_chant_time_' + dailyChantDate);
+    updateTodaySummary();
 }
 
 function updateStats() {
