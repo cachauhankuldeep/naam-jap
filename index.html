@@ -1133,6 +1133,10 @@ let permPending      = false; // true while Chrome's mic permission bar is showi
 let permRetryInterval = null; // independent interval that retries rec.start() during permission re-ask
 let srCycleCount     = 0;   // recognitions in current SR instance (for proactive reset)
 let srDoReset        = false; // flag: rebuild SR instance on next onend
+// Performance caches — avoids expensive localStorage reads and Intl calls on every count
+let _backfillExpiry  = 0;
+let _backfillResult  = null;
+let _grandEtaExpiry  = 0;
 
 const STORAGE_KEY  = 'radha_jap_history';
 const TARGETS_KEY  = 'radha_jap_targets'; // manually set targets for past dates
@@ -1388,6 +1392,11 @@ function updateGrandCard(liveTotalOverride) {
         return;
     }
 
+    // Throttle expensive toLocaleDateString + innerHTML to at most every 2s
+    const now = Date.now();
+    if (now < _grandEtaExpiry) return;
+    _grandEtaExpiry = now + 2000;
+
     const daysLeft   = Math.ceil(remaining / avgPerDay);
     const finishDate = new Date(todayMs + daysLeft * 86400000);
     const dateLabel  = finishDate.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -1461,6 +1470,8 @@ function saveToHistory(n) {
     // Update cached grand total so addCount can pass a live value without re-reading localStorage
     savedGrandTotal = Object.values(hist).reduce((a, b) => a + b, 0);
     refreshPaceCache(); // keep cachedPaceStart fresh after every write
+    _backfillExpiry = 0; // invalidate backfill cache after any save
+    _grandEtaExpiry = 0; // force ETA refresh on next card update
     updateGrandCard();
     updateBackfillBanner();
     updateTodaySummary();
@@ -1860,7 +1871,12 @@ function addCount(n) {
     chantLastHit = now;
 
     clearTimeout(saveDebounce);
-    if (getActiveBackfillDate()) {
+    // Cache backfill check — avoids 2x localStorage reads + JSON.parse on every count
+    if (Date.now() > _backfillExpiry) {
+        _backfillResult = getActiveBackfillDate();
+        _backfillExpiry = Date.now() + 15000;
+    }
+    if (_backfillResult) {
         // Backfill active — save immediately so the banner count stays live-accurate
         saveToHistory(unsavedCount); unsavedCount = 0;
     } else {
