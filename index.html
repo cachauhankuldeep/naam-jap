@@ -1387,12 +1387,15 @@ function updateGrandCard(liveTotalOverride) {
         updateGame10k(totalDone);
         return;
     }
+    // 1K countdown must update on every count — keep it outside the ETA throttle
+    updateGame10k(totalDone);
+
     if (avgPerDay < 1) {
         _el.grandEta.textContent = 'Start chanting to see your estimated completion date…';
         return;
     }
 
-    // Throttle expensive toLocaleDateString + innerHTML to at most every 2s
+    // Throttle only the expensive toLocaleDateString + innerHTML (ETA section)
     const now = Date.now();
     if (now < _grandEtaExpiry) return;
     _grandEtaExpiry = now + 2000;
@@ -1405,8 +1408,6 @@ function updateGrandCard(liveTotalOverride) {
         `~${fmtIN(Math.round(avgPerDay))}/day avg<br>` +
         `<span class="grand-eta-date">${dateLabel}</span>` +
         `<span class="grand-eta-days"> · ${fmtIN(daysLeft)} days</span>`;
-
-    updateGame10k(totalDone);
 }
 
 // Returns oldest past-date with an unfulfilled manual target, or null
