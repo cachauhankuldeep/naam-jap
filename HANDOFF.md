@@ -1,5 +1,5 @@
 # Naam Jap — Handoff Document
-_Last updated: 2026-06-03_
+_Last updated: 2026-09-24_
 
 ---
 
@@ -12,64 +12,304 @@ A speech-activated counter that counts the word "Radha" when the user chants it.
 - **GitHub Pages (iPhone-accessible):** https://cachauhankuldeep.github.io/naam-jap
 - **GitHub repo:** https://github.com/cachauhankuldeep/naam-jap.git
 - **Local file:** `/Users/kuldeepmac/App_Coding/Naam_Jap/index.html`
-- **Git push command:** `cd /Users/kuldeepmac/App_Coding/Naam_Jap && git add index.html && git commit -m "..." && git push`
+- **Git push command:** `git add index.html && git commit -m "..." && git push`
 
 ---
 
-## Page Layout (Desktop)
+## Page Layout (Desktop — 3-column flex)
 
-Two-column flex layout (`.page-cols`):
-- **Left column** (`.main-col`): counter card, progress bar, target, controls, transcript, history, auto-save buttons
-- **Right column** (`.grand-card`): Maha Lakshya panel — 420px wide, `position: sticky; top: 32px` so it stays visible while scrolling
-
-On mobile (≤900px): grand-card switches to `position: fixed` bottom strip, main-col takes full width.
+```
+[ milestone-col auto ] [ main-col flex:1 ] [ grand-card 210px ]
+  1K countdown           counter card         Maha Lakshya
+  chanting clock         progress bar         (50% size)
+  today timer            transcript           (sticky right)
+  (sticky left)          history
+```
 
 ```css
-.page-cols { display: flex; flex-direction: row; align-items: flex-start; max-width: 1160px; gap: 36px; }
-.main-col  { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
-.grand-card { flex: 0 0 420px; position: sticky; top: 32px; }
-@media (max-width: 900px) { .page-cols { flex-direction: column; } .grand-card { position: fixed; bottom: 0; ... } }
+.page-cols     { display: flex; flex-direction: row; align-items: flex-start; max-width: 1160px; gap: 36px; }
+.milestone-col { flex: 0 0 auto; min-width: 240px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 32px; align-self: flex-start; }
+.main-col      { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+.grand-card    { flex: 0 0 210px; width: 210px; position: sticky; top: 32px; }
+```
+
+**Mobile (≤900px):** milestone-col becomes a horizontal flex strip below main content.
+**Mobile (≤520px):** milestone-col stacks vertically again.
+
+---
+
+## Color Scheme
+
+| Role | Value |
+|------|-------|
+| Body background | `#ffffff` |
+| Body text | `#0f4743` (dark teal) |
+| Accent / count numbers | `#4d9e8c` (muted teal — matched to user's reference image) |
+| Card borders | `rgba(26,94,82,0.2)` dark green |
+| Card backgrounds | `rgba(26,94,82,0.04)` very light green tint |
+| Box shadows | `rgba(26,94,82,0.08)` |
+
+---
+
+## Typography
+
+```html
+<html lang="en">  <!-- MUST be "en" — "hi" makes :lang(hi) apply Devanagari serif to ALL elements -->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Tiro+Devanagari+Hindi:ital@0;1&display=swap" rel="stylesheet">
+```
+
+```css
+body {
+    font-family: 'Aptos', 'Aptos Display', 'Inter', 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+    color: #0f4743;
+}
+.deity-name, [lang="hi"], :lang(hi) {
+    font-family: 'Tiro Devanagari Hindi', 'Noto Sans Devanagari', serif;
+}
 ```
 
 ---
 
-## Architecture — Three Paths Based on Browser Detection
+## Number Formatting
+
+```javascript
+// Western format: 1500000 → "1,500,000" (NOT Indian "15,00,000")
+function fmtIN(n) {
+    n = Math.round(n);
+    if (n < 0) return '-' + fmtIN(-n);
+    return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+```
+All number displays use `fmtIN()`. No `toLocaleString()` calls remain in the codebase.
+
+---
+
+## Counter Cards (Left Column)
+
+### Radha Count card
+```css
+.counter-card {
+    background: rgba(26,94,82,0.04);
+    border: 1px solid rgba(26,94,82,0.2);
+    border-radius: 24px;
+    padding: 28px 52px 24px;
+    width: 320px;       /* fixed — prevents shake as digits change */
+    overflow: hidden;
+}
+.count-number {
+    font-size: 6rem;
+    font-weight: 700;
+    color: #4d9e8c;
+    font-variant-numeric: tabular-nums;  /* prevents layout shift */
+}
+```
+
+### Dynamic font scaling (prevents overflow for large numbers)
+```javascript
+const _FONT_SIZES = [6, 6, 6, 6, 4.5, 3.8, 3.0, 2.5, 2.0, 1.7, 1.5]; // indexed by digit count
+function fitCountFont() {
+    const digits = count > 0 ? (Math.floor(Math.log10(count)) + 1) : 1;
+    el.style.fontSize = (_FONT_SIZES[Math.min(digits, _FONT_SIZES.length - 1)] || 1.5) + 'rem';
+}
+function fitGame10kFont(rem) {
+    const digits = rem > 0 ? (Math.floor(Math.log10(rem)) + 1) : 1;
+    el.style.fontSize = (_FONT_SIZES[Math.min(digits, 4)] || 4.5) + 'rem';
+}
+```
+
+### 1K Countdown card (`GAME_10K = 1000`)
+```css
+.game10k-card {
+    border-color: rgba(26,94,82,0.5);
+    padding: 28px 52px 24px;
+    width: 320px;       /* same size as Radha Count card */
+    overflow: hidden;
+}
+.game10k-card .block-mini-num { font-size: 6rem; font-variant-numeric: tabular-nums; }
+```
+- Counts down from 1000 to 0, then resets (Round N++)
+- `GAME_10K = 1000` constant
+
+---
+
+## Chanting Clock + Today Timer (Left Column, below 1K card)
+
+### HTML
+```html
+<div class="stats" id="stats">
+  <div class="clock-ring" id="clockRing">
+    <span class="clock-label">Chanting</span>
+    <span class="clock-time" id="clockTime">--:--</span>
+  </div>
+  <div class="today-summary">
+    <div class="today-summary-label" style="display:flex;align-items:center;justify-content:center;gap:6px;">
+      Today
+      <button onclick="resetDailyChantTime()" title="Reset today's timer" ...>✕</button>
+    </div>
+    <div class="today-summary-row">
+      <span class="today-val" id="dailyChantTime">–</span>
+    </div>
+  </div>
+</div>
+```
+
+### Daily chanting time state
+```javascript
+let dailyChantSecs     = 0;   // total chanting seconds for today (persists across session resets)
+let sessionFlushedSecs = 0;   // how much of this session is already added to dailyChantSecs
+let dailyChantDate     = '';  // YYYY-MM-DD key for current day (set on init)
+```
+
+### Midnight rollover
+```javascript
+function checkDateRollover() {
+    const today = todayKey();
+    if (today === dailyChantDate) return;
+    // Flush remaining seconds to old day's key
+    const secs = getElapsed();
+    const delta = secs - sessionFlushedSecs;
+    if (delta > 0) {
+        dailyChantSecs += delta;
+        localStorage.setItem('radha_jap_chant_time_' + dailyChantDate, dailyChantSecs);
+    }
+    // Reset for new day
+    dailyChantDate     = today;
+    sessionFlushedSecs = secs;
+    dailyChantSecs     = parseInt(localStorage.getItem('radha_jap_chant_time_' + today) || '0', 10);
+    updateTodaySummary();
+}
+// Called at top of flushDailyChantTime() AND via setInterval every 60s (catches idle pages at midnight)
+setInterval(checkDateRollover, 60000);
+```
+
+### Manual reset button
+```javascript
+function resetDailyChantTime() {
+    dailyChantSecs     = 0;
+    sessionFlushedSecs = getElapsed();
+    localStorage.removeItem('radha_jap_chant_time_' + dailyChantDate);
+    updateTodaySummary();
+}
+```
+The ✕ button resets both in-memory value AND localStorage atomically (unlike external deletion, which gets overwritten by beforeunload).
+
+### How the timer works
+- `chantElapsed` (ms) — accumulated from completed bursts
+- `chantSegStart` — timestamp when current burst began
+- `chantLastHit` — timestamp of last count
+- `CHANT_PAUSE = 4000ms` — silence threshold; after 4s of no counts, burst ends
+- `getElapsed()` → seconds of active chanting (not idle time)
+- `sessionFlushedSecs` resets on `resetAll()` but `dailyChantSecs` persists
+
+---
+
+## Performance Caches (Critical — do not remove)
+
+```javascript
+let _backfillExpiry = 0;   // timestamp when _backfillResult expires
+let _backfillResult = null; // cached getActiveBackfillDate() result
+let _grandEtaExpiry = 0;   // timestamp when grand card ETA was last updated
+```
+
+**Why these exist:**
+- `addCount()` was calling `getActiveBackfillDate()` on every count → 2x `localStorage.getItem` + `JSON.parse` per count
+- `updateGrandCard()` was calling `toLocaleDateString()` + `innerHTML =` on every count → heavy Intl + DOM reparse
+- With rapid speech recognition, this caused visible counting lag
+- Fix: backfill cached for 15s (invalidated on save); ETA throttled to max once per 2s
+- Both caches invalidated in `saveToHistory()` via `_backfillExpiry = 0; _grandEtaExpiry = 0;`
+
+---
+
+## Maha Lakshya (1 Crore Grand Target) — Right Column
+- **Target:** 10,000,000 (1 crore) — displayed as `of 10,000,000`
+- **Card size: 210px wide**
+- Shows: total done, percentage, progress bar, daily avg, estimated completion date
+- `updateGrandCard()` fast path (count/pct/bar) runs on every `addCount()`
+- ETA section (`toLocaleDateString` + `innerHTML`) throttled to max every 2s
+
+---
+
+## Architecture — Platform Detection
 
 ```javascript
 const hasSR    = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 const isMobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent) && !window.MSStream;
+const useSR    = hasSR && !isMobile;   // desktop Chrome only
 ```
 
-### Path 1 — Desktop Chrome (hasSR=true, isMobile=false)
+### Path 1 — Desktop Chrome (`useSR = true`)
 - Uses **Web Speech Recognition API** (`webkitSpeechRecognition`)
 - `continuous: true`, `interimResults: true`, `lang: 'hi-IN'`
 - Counts by matching transcript against `PATTERNS` (Devanagari + Roman variants)
 - Same `rec` instance reused on every `onend` restart — 50ms gap between sessions
-- **Chrome permission re-ask at ~2300 counts:** Chrome's internal session expires and shows a browser-level permission bar. This is a Chrome security feature — cannot be suppressed from JS. Handled gracefully:
-  - App does NOT stop (green dot turns amber)
-  - Status shows **"⚠️ Click Allow in browser bar ↑"**
+- **Chrome permission re-ask at ~2300 counts:** Chrome shows browser-level permission bar
+  - App does NOT stop; status shows **"⚠️ Click Allow in browser bar ↑"**
   - Full-screen modal (`#permModal`) appears with instructions
-  - Independent `permRetryInterval` (setInterval 800ms) retries `rec.start()` — does not rely on `onend`
-  - Once user clicks Allow → `onstart` fires → `permPending` cleared → counting resumes, dot goes green
-  - User never needs to press the Start button again
-  - **Permanent fix tip shown in modal:** Chrome lock icon → Microphone → Always Allow
+  - Independent `permRetryInterval` (setInterval 800ms) retries `rec.start()`
+  - Once user clicks Allow → `onstart` fires → counting resumes automatically
+  - **Permanent fix:** Chrome lock icon → Microphone → Always Allow
 
-### Path 2 — Safari iOS / Android Chrome (hasSR=true, isMobile=true)
-- Uses **Web Speech Recognition API** (same as desktop)
-- **Repetition blindness fix:** rebuilds recognition instance every 7 counts (`srCycleCount` + `srDoReset` flags)
-  - Speech engines stop recognising the same repeated word after ~8–10 repeats
-  - Rebuild resets engine memory before blindness kicks in
-  - 80ms gap on each rebuild
-- Status: works but not thoroughly tested recently
+### Path 2 — ALL Mobile (`useSR = false`)
+- Uses **Web Audio API** burst detection (VAD) — see VAD section below
+- `startListening()` creates AudioContext + calls `startBurstDetection(stream, actx)`
+- `stopListening()` calls `stopBurstDetection()`
+- `micStream` kept alive between Stop/Start to avoid repeated permission dialogs
 
-### Path 3 — Chrome on iOS / CriOS (hasSR=false)
-- Chrome on iPhone has NO `webkitSpeechRecognition` → falls to burst detection
-- Uses **Web Audio API** (`AudioContext` + `AnalyserNode`) — counts by detecting speech onset (rising edge of mic volume)
-- `getUserMedia` with `echoCancellation:false, noiseSuppression:false, autoGainControl:false`
-- AudioContext created AND `resume()`d **synchronously in the tap handler** — CriOS suspends it if created async
-- Audio graph: `source → analyser → gain(0) → destination` — destination connection required for iOS to run the graph
-- `micStream` kept **alive between Stop/Start** — releasing it triggers repeated permission dialogs
-- Status: **problematic** — user reports unreliable counting. Root cause not resolved.
+---
+
+## Mobile VAD Algorithm — Current State (Iteration 4)
+
+**Status: NOT YET CONFIRMED WORKING. User has not tested iteration 4.**
+
+### Constants:
+```javascript
+const RISE_RATIO    = 1.8;
+const FALL_RATIO    = 1.4;
+const MIN_ABS       = 0.003;
+const MAX_SPEECH_MS = 500;
+const MIN_ONSET_GAP = 150;
+```
+
+### Algorithm:
+```javascript
+// WARMUP: time-based (400ms grace)
+lastCountTime = Date.now() + 400;
+
+let fastEMA = 0, slowEMA = 0;
+let state = 'IDLE', speechEntry = 0;
+
+function tick() {
+    if (!burstCtx) return;
+    if (burstCtx.state !== 'running') burstCtx.resume();  // KEY: no early return on suspended
+
+    analyser.getByteTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) { const v = (buf[i]-128)/128; sum += v*v; }
+    const rms = Math.sqrt(sum / buf.length);
+    const now = Date.now();
+
+    fastEMA = fastEMA * 0.25 + rms * 0.75;
+
+    if (state === 'IDLE') {
+        slowEMA = slowEMA * 0.85 + rms * 0.15;
+        const ratio = slowEMA > 0.001 ? fastEMA / slowEMA : 1;
+        if (ratio > RISE_RATIO && fastEMA > MIN_ABS && (now - lastCountTime) > MIN_ONSET_GAP) {
+            state = 'ACTIVE'; speechEntry = now; addCount(1); lastCountTime = now;
+        }
+    } else {
+        if (fastEMA < slowEMA * FALL_RATIO || (now - speechEntry) > MAX_SPEECH_MS) state = 'IDLE';
+    }
+    burstTimer = requestAnimationFrame(tick);
+}
+```
+
+### Tuning guide:
+| Symptom | Fix |
+|---------|-----|
+| Zero counts, `ctx: suspended` throughout | AudioContext not resuming |
+| `ratio` never exceeds 1.8 when chanting | Lower `RISE_RATIO` to 1.4–1.5 |
+| Over-counting ambient noise | Raise `RISE_RATIO` to 2.0–2.5 or raise `MIN_ABS` |
+| Under-counting fast chanting | Lower `MIN_ONSET_GAP` to 100ms |
 
 ---
 
@@ -86,183 +326,123 @@ const PATTERNS = [
 
 ---
 
-## Mobile Burst Detection Algorithm (Path 3 only)
-```
-CALIB_MS      = 1500   // 1.5s ambient noise measurement on each Start
-MAX_SPEECH_MS = 300    // force-exit speech state after 300ms (handles continuous chanting)
-MIN_ONSET_GAP = 150    // min ms between counts
-
-// Auto-calibration (runs for first 1.5s after Start — user must stay silent):
-avg = mean of ambient RMS samples
-dynHigh = clamp(avg * 3 + 0.002, 0.003, 0.015)   // entry threshold
-dynLow  = dynHigh * 0.35                           // exit threshold
-
-// Tick loop (requestAnimationFrame — more reliable than setInterval on mobile):
-if (AudioContext.state !== 'running') → resume and skip frame
-smoothRMS = smoothRMS * 0.35 + rms * 0.65
-
-if (!inSpeech && smoothRMS > dynHigh && gap > MIN_ONSET_GAP):
-    inSpeech = true; addCount(1)
-elif inSpeech:
-    if smoothRMS < dynLow OR elapsed > MAX_SPEECH_MS:
-        inSpeech = false
-```
-
-**Tuning guide (if burst detection is under/over counting):**
-- Under-counting → lower `dynHigh` floor: change `Math.max(0.003, ...)` to `0.002`
-- Over-counting / noise triggers → raise multiplier from `avg * 3` to `avg * 4`
-- Double-counting → increase `MIN_ONSET_GAP` to 200–250ms
-- Missing fast chanting → decrease `MAX_SPEECH_MS` to 200ms and `MIN_ONSET_GAP` to 100ms
-
----
-
 ## localStorage Keys
 | Key | Purpose |
 |-----|---------|
 | `radha_jap_history` | `{ "YYYY-MM-DD": count }` — daily chant history |
 | `radha_jap_targets` | `{ "YYYY-MM-DD": target }` — manually set per-date targets |
-
-**Current data:** 4,00,000 counts seeded across Apr 18 – May 26, 2026 (39 days × ~10,256/day)
+| `radha_jap_chant_time_YYYY-MM-DD` | seconds of active chanting for that date (resets at midnight) |
 
 ---
 
 ## Key State Variables
 ```javascript
-let recognition       = null;   // SR instance (reused on desktop)
-let isListening       = false;
-let permPending       = false;  // true while Chrome's mic permission bar is showing
-let permRetryInterval = null;   // independent setInterval retrying rec.start() during re-ask
-let creditedPerIndex  = {};     // tracks counts already credited per result index
-let srCycleCount      = 0;      // counts since last SR rebuild (mobile only)
-let srDoReset         = false;  // signals onend to rebuild SR instance (mobile only)
-let micStream         = null;   // kept alive (iOS: avoids re-asking permission on Stop/Start)
-let dynHigh, dynLow   = ...;    // burst detection thresholds, set during calibration
-let savedGrandTotal   = 0;      // cached total from localStorage, updated in saveToHistory()
-let unsavedCount      = 0;      // counts since last flush to localStorage
-let saveDebounce      = null;   // 3s debounce timer for normal-mode saves
+let count              = 0;
+let recognition        = null;    // SR instance (reused on desktop)
+let isListening        = false;
+let permPending        = false;
+let permRetryInterval  = null;
+let creditedPerIndex   = {};
+let micStream          = null;
+let savedGrandTotal    = 0;
+let unsavedCount       = 0;
+let saveDebounce       = null;
+let chantElapsed       = 0;       // accumulated ms from completed chant bursts
+let chantSegStart      = null;    // Date.now() when current burst began
+let chantLastHit       = null;    // Date.now() of most recent count
+const CHANT_PAUSE      = 4000;    // ms of silence before pausing timer
+let dailyChantSecs     = 0;
+let sessionFlushedSecs = 0;
+let dailyChantDate     = '';
+let _backfillExpiry    = 0;       // performance cache for getActiveBackfillDate()
+let _backfillResult    = null;
+let _grandEtaExpiry    = 0;       // throttle for grand card ETA updates
+const GAME_10K         = 1000;    // 1K countdown size
+const GRAND_TARGET     = 10000000; // 1 crore
 ```
 
 ---
 
-## Maha Lakshya (1 Crore Grand Target)
-- **Target:** 1,00,00,000 (1 crore)
-- **Pace start date:** `PACE_START = '2026-04-18'`
-- Shows: total done, percentage, thick progress bar, daily avg, estimated completion date + days remaining
-- Updated live on every `addCount()` call via `updateGrandCard(savedGrandTotal + unsavedCount)`
-- Uses earliest history key or PACE_START (whichever is earlier) for daily average calculation
-
----
-
 ## Past-Date Target Backfill System
-- In history panel, each past date has a `<input>` target field (saved on Enter or blur)
+- In history panel, each past date has a target input (saved on Enter or blur)
 - `saveTarget(dateKey, rawVal)` → stores in `radha_jap_targets`
 - `getActiveBackfillDate()` → returns oldest unfulfilled past-date target
 - `saveToHistory(n)` → routes counts to oldest unfulfilled target first, remainder to today
-- Backfill banner (`#backfillBanner`) shows which date is being filled + progress
 - When backfill active → save immediately; normal mode → debounce 3s
 
 ---
 
 ## Data Safety — Auto-Save + Restore System
 
-### Problem
-Chrome clears `localStorage` and `IndexedDB` when user re-logs into Chrome profile. Both the history data and the file handle are lost.
-
 ### Auto-Save (File System Access API)
 - **💾 Set Auto-Save File** button at bottom of app
-- User picks a file location once → Chrome shows save picker → file created
-- `FileSystemFileHandle` stored in IndexedDB (`naam_jap_db` / `handles` store / key `auto_save_handle`)
-- Saves every 30 seconds via `setInterval` + on `visibilitychange` (hidden) + on `beforeunload`
-- File format: `{ history: {...}, targets: {...}, savedAt: "ISO string", version: 1 }`
-- On startup: `initAutoSave()` checks IndexedDB for stored handle; if found + permission granted → resumes silently
-- Button label changes to "💾 Saving to file" when active
-- Status shows last save time: "✓ Saved at 10:32 PM"
+- `FileSystemFileHandle` stored in IndexedDB (`naam_jap_db` / `handles` / key `auto_save_handle`)
+- Saves every 30 seconds + on `visibilitychange` + on `beforeunload`
+- Format: `{ history: {...}, targets: {...}, savedAt: "ISO string", version: 1 }`
 
 ### Restore from Backup
-- **📂 Restore from Backup** button always visible (doesn't require empty localStorage)
-- Also: full-screen restore modal (`#restoreModal`) shown automatically when localStorage is empty on load
-- `pickAndRestoreFile()` → opens Chrome file picker (or falls back to `<input type=file>`)
-- Smart merge: keeps whichever count is higher per date (protects new counts added since last backup)
-- After restore: shows alert with total count + prompts to re-enable auto-save
-- `startFresh()` button in modal: seeds 4,00,000 base data if user has no backup
-
-### Restore Modal (shown when localStorage empty)
-```html
-<div class="restore-modal" id="restoreModal"> ... </div>
-<input type="file" id="restoreFileInput" accept=".json" style="display:none">
-```
-Two options:
-1. **📂 Pick Backup File & Restore** → loads data from file
-2. **No backup — start fresh** → seeds 4,00,000 base data
+- **📂 Restore from Backup** always visible
+- Auto-shown when localStorage is empty on load
+- Smart merge: keeps whichever count is higher per date
 
 ---
 
-## UI Features
-- Purple/gold spiritual theme, राधा title
-- **Two-column desktop layout:** counting app left | Maha Lakshya right (sticky)
-- Big count display with gold flash on increment
-- Target input + progress bar (session target)
-- Session timer (only ticks while listening)
-- Live transcript box + thin gold level bar (pulses with voice)
-- Amber dot + "Click Allow" message + full-screen modal when Chrome permission bar appears
-- Date-wise history stored in `localStorage`
-- History panel with month accordion (preserves open/closed state on re-render)
-- Past-date target inputs in history rows (Enter or blur to save)
-- Backfill banner while filling a past-date target
-- Reset button (resets session counter only, not history)
-- Auto-save status row at bottom
+## Recent Commit History (this session)
+| Commit | What changed |
+|--------|-------------|
+| `fd13ca5` | Fix number overflow: Western format, dynamic font scaling |
+| `9a74ba7` | Midnight rollover: reset daily chanting time at 12 AM |
+| `782ade7` | Fix hardcoded Indian format `of 1,00,00,000` → `of 10,000,000` |
+| `35e8ce7` | Add ✕ reset button for Today chanting timer |
+| `065fe89` | Fix counting lag: cache backfill check, throttle ETA updates |
 
 ---
 
 ## Known Issues / Status
 
-### Desktop Chrome — Working well
-- Counting is accurate and fast
-- At ~2300 counts Chrome's internal session expires → full-screen modal appears → user clicks Allow once in browser bar → counting resumes automatically
-- **Permanent fix:** Chrome address bar → lock icon → Microphone → Always Allow
+### Desktop Chrome — Working well ✅
+- Counting accurate; lag fixed (backfill cache + ETA throttle)
+- Chrome permission re-ask at ~2300 counts handled gracefully
 
-### Mobile Safari iOS — Partially working
-- Uses SR with 7-count rebuild (repetition blindness fix)
-- Counting speed slower than desktop
-- Not thoroughly re-tested after recent changes
-
-### Mobile Chrome iOS (CriOS) — Problematic
-- Uses burst detection (no SR available in CriOS)
-- Auto-calibration runs on Start (1.5s silence required)
-- User reports it "not working at all" — root cause not identified
-- **Next step if revisiting:** Add RMS debug display temporarily to measure actual values vs dynHigh threshold
+### Mobile — NOT WORKING ⚠️
+- All mobile uses VAD (iteration 4 pushed, not yet tested by user)
+- **Next step:** User tests at https://cachauhankuldeep.github.io/naam-jap (hard refresh: hold reload on iPhone)
+- Look at `#debugBox` while chanting and report `rms`, `ratio`, `ctx` values
+- After mobile working: remove `#debugBox` and its population code from `startBurstDetection()`
 
 ### Path B (future)
 - User's end goal: paid app on App Store + Google Play
-- Requires **React Native** with `SFSpeechRecognizer` (iOS) and Google Speech-to-Text (Android)
-- Decision deferred until Path A is satisfactory
+- Requires React Native with `SFSpeechRecognizer` (iOS) + Google Speech-to-Text (Android)
 
 ---
 
-## Key Technical Decisions Made
-1. **Desktop SR: same instance reuse** — rebuilding triggers Chrome session limit + permission re-ask; reuse delays it to ~2300 counts
-2. **permPending + independent setInterval** — keeps app alive during Chrome permission re-ask; interval retries rec.start() every 800ms without relying on onend
-3. **Mobile SR: 7-count rebuild** — resets engine memory before repetition blindness (same word stops being recognised at ~8–10 repeats)
-4. **CriOS: burst detection instead of SR** — CriOS has no Web Speech API
-5. **AudioContext in tap handler** — iOS/CriOS suspends AudioContext created in async callbacks
-6. **Destination connection required** — iOS Web Audio graph doesn't run without a path to destination
-7. **micStream kept alive** — releasing getUserMedia stream between Stop/Start triggers new permission dialog on iOS
-8. **Auto-calibration on burst detection** — fixed hardcoded 0.005 threshold that was wrong for user's mic/room
-9. **requestAnimationFrame over setInterval** — setInterval gets throttled by mobile browsers
-10. **File System Access API for auto-save** — saves JSON to a user-chosen file on disk every 30s; handle stored in IndexedDB
-11. **Smart merge on restore** — takes max(file count, localStorage count) per date; never loses new chants
-12. **Restore modal on empty localStorage** — guards against Chrome clearing site data on profile re-login
-13. **Two-column layout** — grand-card is now a proper flex sibling (sticky right column) not `position:fixed`, so no overlap with main content
+## Key Technical Decisions
+1. **Desktop SR: same instance reuse** — rebuilding triggers Chrome permission re-ask earlier
+2. **permPending + independent setInterval** — keeps app alive during Chrome permission bar
+3. **ALL mobile → VAD** — SR has 0.5–2s cloud round-trip lag on mobile
+4. **AudioContext in tap handler** — iOS/CriOS suspends AudioContext from async callbacks
+5. **Destination connection required** — iOS Web Audio graph doesn't run without destination
+6. **micStream kept alive** — releasing getUserMedia triggers new permission dialog on iOS
+7. **No early return on suspended AudioContext** — iter 3 bug caused zero counts on iOS
+8. **Time-based warmup (400ms)** — replaced frame-count WARMUP which broke on suspended ctx
+9. **slowEMA frozen in ACTIVE** — prevents chant energy from polluting ambient baseline
+10. **`font-variant-numeric: tabular-nums`** — prevents card width changing as digits update
+11. **Fixed 320px card width** — both Radha Count and 1K card; prevents layout shake
+12. **`<html lang="en">`** — must NOT be `"hi"`: `:lang(hi)` would apply Tiro Devanagari (serif) to ALL elements
+13. **Performance caches** — `_backfillResult` (15s) and `_grandEtaExpiry` (2s) prevent main-thread blocking on every count
+14. **Western number format** — `fmtIN()` uses `/\B(?=(\d{3})+(?!\d))/g` regex; no `toLocaleString` calls
+15. **Midnight rollover via `checkDateRollover()`** — called every tick + every 60s via setInterval; saves to old date's key, resets for new day
+16. **resetDailyChantTime() for Today ✕ button** — resets both in-memory and localStorage atomically; external localStorage deletion alone doesn't work because `beforeunload` re-writes the in-memory value
 
 ---
 
 ## File Structure
 ```
 /Users/kuldeepmac/App_Coding/Naam_Jap/
-├── index.html              ← entire app (single file, ~1600 lines)
+├── index.html              ← entire app (single file, ~2200 lines)
 ├── HANDOFF.md              ← this file
 └── backup/
-    └── index_backup_23-Apr-2026.html   ← backup before backfill feature
+    └── index_backup_23-Apr-2026.html
 ```
 
 ---
@@ -273,5 +453,6 @@ cd /Users/kuldeepmac/App_Coding/Naam_Jap
 git add index.html
 git commit -m "description"
 git push
-# GitHub Pages auto-deploys in ~30 seconds
+# GitHub Pages auto-deploys in ~1-2 minutes
+# Hard refresh: Cmd+Shift+R (Mac) or hold reload button (iPhone)
 ```
