@@ -52,7 +52,6 @@
             padding: 28px 52px 24px;
             text-align: center;
             margin-bottom: 16px;
-            backdrop-filter: blur(12px);
             box-shadow: 0 2px 12px rgba(26,94,82,0.08), inset 0 1px 0 rgba(26,94,82,0.04);
             width: 320px;
             overflow: hidden;
@@ -469,7 +468,6 @@
             border-radius: 18px;
             padding: 20px 16px 18px;
             text-align: center;
-            backdrop-filter: blur(20px);
             box-shadow: 0 4px 24px rgba(26,94,82,0.12), inset 0 1px 0 rgba(26,94,82,0.06);
         }
         .grand-title {
@@ -563,7 +561,6 @@
                 flex-direction: row;
                 align-items: center;
                 gap: 10px;
-                backdrop-filter: blur(12px);
             }
             .grand-title    { display: none; }
             .grand-done-row { flex-direction: row; align-items: baseline; gap: 6px; margin-bottom: 0; flex: 0 0 auto; }
@@ -1131,8 +1128,12 @@ let targetReached    = false;
 let micStream        = null;
 let permPending      = false; // true while Chrome's mic permission bar is showing
 let permRetryInterval = null; // independent interval that retries rec.start() during permission re-ask
-let srCycleCount     = 0;   // recognitions in current SR instance (for proactive reset)
-let srDoReset        = false; // flag: rebuild SR instance on next onend
+// Desktop SR session recycling — keeps each Chrome recognition session short so it stays fast
+let srSessionStart   = 0;
+let srRecycling      = false;
+const SR_MAX_INTERIM_CHARS = 160;    // ~30 words of "राधा राधा…" in one unfinished phrase
+const SR_MAX_RESULTS       = 40;     // results accumulated in one session
+const SR_MAX_SESSION_MS    = 60000;  // hard cap per session
 // Performance caches — avoids expensive localStorage reads and Intl calls on every count
 let _backfillExpiry  = 0;
 let _backfillResult  = null;
@@ -1617,10 +1618,9 @@ const isMobile = /Android|iPad|iPhone|iPod/i.test(navigator.userAgent) && !windo
 const useSR    = hasSR && !isMobile;   // desktop Chrome only
 
 // ════════════════════════════════════════════════════════
-// SPEECH RECOGNITION
-// Desktop: reuse same instance (avoids Chrome session limit)
-// Mobile:  rebuild every 7 counts — resets iOS engine memory before
-//          repetition blindness kicks in (~8-10 repeats of same word)
+// SPEECH RECOGNITION (desktop Chrome only)
+// One instance, restarted on every onend — rebuilding it makes Chrome re-ask for the mic.
+// Sessions are recycled after ~30 words / 60s so Chrome's transcription stays fast.
 // ════════════════════════════════════════════════════════
 function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1632,6 +1632,8 @@ function buildRecognition() {
     rec.lang            = 'hi-IN';
 
     rec.onstart = () => {
+        srRecycling = false;
+        srSessionStart = Date.now();
         permPending = false;
         if (permRetryInterval) { clearInterval(permRetryInterval); permRetryInterval = null; }
         // Hide permission modal and restore green dot
@@ -1648,10 +1650,6 @@ function buildRecognition() {
         if (permPending) {
             // permRetryInterval already handles restart — don't add a competing timeout here.
             return;
-        } else if (srDoReset) {
-            srDoReset = false;
-            recognition = buildRecognition();
-            setTimeout(() => { if (recognition) try { recognition.start(); } catch(_) {} }, 80);
         } else {
             setTimeout(() => { try { rec.start(); } catch(_) {} }, 50);
         }
@@ -1659,30 +1657,37 @@ function buildRecognition() {
 
     rec.onresult = (event) => {
         let interim = '';
+        let longestInterim = 0;
         for (let i = event.resultIndex; i < event.results.length; i++) {
             const res    = event.results[i];
             const phrase = res[0].transcript;
             const found  = countOccurrences(phrase);
             const prev   = creditedPerIndex[i] || 0;
             const delta  = found - prev;
-            if (delta > 0) {
-                addCount(delta);
-                if (isMobile) {
-                    srCycleCount += delta;
-                    if (srCycleCount >= 7 && !srDoReset) {
-                        srCycleCount = 0;
-                        srDoReset = true;
-                        setTimeout(() => { try { rec.stop(); } catch(_) {} }, 0);
-                    }
-                }
-            }
+            if (delta > 0) addCount(delta);
             creditedPerIndex[i] = found;
             if (res.isFinal) {
                 delete creditedPerIndex[i];
-                setTranscript(highlight(phrase), false);
-            } else { interim += phrase; }
+                setTranscript(phrase, false);
+            } else {
+                interim += phrase;
+                if (phrase.length > longestInterim) longestInterim = phrase.length;
+            }
         }
-        if (interim) setTranscript(highlight(interim), true);
+        if (interim) setTranscript(interim, true);
+
+        // Recycle the session before it gets slow. Non-stop chanting never pauses, so
+        // Chrome never finalises the phrase: the interim text grows without limit and
+        // Chrome re-transcribes the whole thing on every update → counts arrive later
+        // and later. stop() makes Chrome deliver the final result (credited as usual
+        // via creditedPerIndex), then onend restarts the same instance in 50ms.
+        if (!srRecycling &&
+            (longestInterim > SR_MAX_INTERIM_CHARS ||
+             event.results.length > SR_MAX_RESULTS ||
+             Date.now() - srSessionStart > SR_MAX_SESSION_MS)) {
+            srRecycling = true;
+            try { rec.stop(); } catch (_) {}
+        }
     };
 
     rec.onerror = (e) => {
@@ -1694,8 +1699,7 @@ function buildRecognition() {
                 if (!permPending) {
                     permPending = true;
                     // Flush any unsaved counts immediately so nothing is lost during the pause
-                    if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
-                    clearTimeout(saveDebounce);
+                    flushUnsaved();
                     // Amber dot + status text (visible behind modal too)
                     document.getElementById('dot').style.background = '#f59e0b';
                     document.getElementById('dot').style.boxShadow = '0 0 10px #f59e0b';
@@ -1821,7 +1825,7 @@ function startBurstDetection(stream, actx) {
                 speechEntry = now;
                 addCount(1);
                 lastCountTime = now;
-                setTranscript(highlight('राधा'), false);
+                setTranscript('राधा', false);
             }
 
         } else { // ACTIVE — slowEMA frozen at ambient
@@ -1853,14 +1857,32 @@ function setUI(on) {
     document.getElementById('stopBtn').style.display  = on ? 'inline-block' : 'none';
 }
 
-function setTranscript(html, isInterim) {
-    const box = document.getElementById('transcript');
-    box.innerHTML = isInterim ? `<span class="interim">${html}</span>` : html;
-    box.scrollTop = box.scrollHeight;
+// Transcript is repainted at most once per frame, and only its tail — the box shows
+// ~3 lines, so rendering a huge phrase just burns CPU on regex + layout.
+let _pendingTranscript = null;
+function setTranscript(text, isInterim) {
+    if (text.length > 120) text = '…' + text.slice(-120);
+    const first = _pendingTranscript === null;
+    _pendingTranscript = { text, isInterim };
+    if (first) requestAnimationFrame(() => {
+        const { text, isInterim } = _pendingTranscript;
+        _pendingTranscript = null;
+        const safe = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const html = highlight(safe);
+        const box  = document.getElementById('transcript');
+        box.innerHTML = isInterim ? `<span class="interim">${html}</span>` : html;
+        box.scrollTop = box.scrollHeight;
+    });
 }
 
 let unsavedCount = 0;
 let saveDebounce = null;
+
+function flushUnsaved() {
+    clearTimeout(saveDebounce);
+    saveDebounce = null;
+    if (unsavedCount > 0) { const n = unsavedCount; unsavedCount = 0; saveToHistory(n); }
+}
 
 function addCount(n) {
     count += n;
@@ -1871,32 +1893,43 @@ function addCount(n) {
     if (!chantSegStart) chantSegStart = now;
     chantLastHit = now;
 
-    clearTimeout(saveDebounce);
     // Cache backfill check — avoids 2x localStorage reads + JSON.parse on every count
-    if (Date.now() > _backfillExpiry) {
+    if (now > _backfillExpiry) {
         _backfillResult = getActiveBackfillDate();
-        _backfillExpiry = Date.now() + 15000;
+        _backfillExpiry = now + 15000;
     }
     if (_backfillResult) {
-        // Backfill active — save immediately so the banner count stays live-accurate
-        saveToHistory(unsavedCount); unsavedCount = 0;
+        // Backfill active — save at most once a second so the banner stays live
+        // without rewriting localStorage + history panel on every single count
+        if (!saveDebounce) saveDebounce = setTimeout(flushUnsaved, 1000);
     } else {
         // Normal mode — batch writes, flush after 3s of silence
-        saveDebounce = setTimeout(() => {
-            if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
-        }, 3000);
+        clearTimeout(saveDebounce);
+        saveDebounce = setTimeout(flushUnsaved, 3000);
     }
 
-    const el = document.getElementById('countDisplay');
-    el.textContent = fmtIN(count);
-    fitCountFont();
-    // Flash without forcing a synchronous reflow
-    el.style.transform = 'scale(1.2)';
-    el.style.color = '#ffffff';
-    setTimeout(() => { el.style.transform = ''; el.style.color = ''; }, 200);
-    if (target) updateProgress();
-    // Live grand-card update: savedGrandTotal (last flush) + unsavedCount = true running total
-    updateGrandCard(savedGrandTotal + unsavedCount);
+    scheduleCountRender();
+}
+
+// All count-driven DOM updates happen once per animation frame, however many counts arrived.
+let _countRenderQueued = false;
+let _flashTimer = null;
+function scheduleCountRender() {
+    if (_countRenderQueued) return;
+    _countRenderQueued = true;
+    requestAnimationFrame(() => {
+        _countRenderQueued = false;
+        const el = document.getElementById('countDisplay');
+        el.textContent = fmtIN(count);
+        fitCountFont();
+        el.style.transform = 'scale(1.08)';
+        el.style.color = '#0f4743';   // darker teal pulse — stays readable on the white card
+        clearTimeout(_flashTimer);
+        _flashTimer = setTimeout(() => { el.style.transform = ''; el.style.color = ''; }, 200);
+        if (target) updateProgress();
+        // Live grand-card update: savedGrandTotal (last flush) + unsavedCount = true running total
+        updateGrandCard(savedGrandTotal + unsavedCount);
+    });
 }
 
 function showError(msg) {
@@ -1921,7 +1954,6 @@ function startListening() {
 
     if (useSR) {
         // Desktop Chrome only: Speech Recognition (accurate word matching, no lag on fast hardware)
-        srCycleCount = 0;
         if (!recognition) recognition = buildRecognition();
         if (!recognition) { isListening = false; showError('Speech recognition not supported. Use Google Chrome on desktop.'); return; }
         try { recognition.start(); } catch(e) {
@@ -1964,8 +1996,7 @@ function stopListening() {
     if (!useSR) stopBurstDetection();
     else if (recognition) try { recognition.stop(); } catch(_) {}
     // iOS: keep micStream alive — releasing it triggers a new permission dialog next time
-    if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
-    clearTimeout(saveDebounce);
+    flushUnsaved();
     flushDailyChantTime();
     setUI(false);
     updateStats();
@@ -1986,8 +2017,6 @@ function resetAll() {
     clearInterval(statsTimer);
     statsTimer   = null;
     recognition  = null;
-    srCycleCount = 0;
-    srDoReset    = false;
     if (permRetryInterval) { clearInterval(permRetryInterval); permRetryInterval = null; }
     if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
 
@@ -2044,8 +2073,8 @@ function updateGame10k(total) {
             card.classList.add('flash');
             setTimeout(() => card.classList.remove('flash'), 1200);
         }
-        _el.game10kNum.style.color      = '#ffffff';
-        _el.game10kNum.style.textShadow = '0 0 30px rgba(255,255,255,0.9)';
+        _el.game10kNum.style.color      = '#0f4743';
+        _el.game10kNum.style.textShadow = '0 0 30px rgba(77,158,140,0.6)';
         setTimeout(() => { _el.game10kNum.style.color = ''; _el.game10kNum.style.textShadow = ''; }, 1200);
         _el.game10kSub.textContent = '🎉 Round complete!';
         setTimeout(() => { _el.game10kSub.textContent = 'remaining'; }, 2200);
@@ -2279,12 +2308,12 @@ async function setupAutoSave() {
 // ── Save on tab hide / page close ─────────────────────
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-        if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
+        flushUnsaved();
         doAutoSave();
     }
 });
 window.addEventListener('beforeunload', () => {
-    if (unsavedCount > 0) { saveToHistory(unsavedCount); unsavedCount = 0; }
+    flushUnsaved();
 });
 </script>
 </body>
