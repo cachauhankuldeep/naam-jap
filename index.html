@@ -1686,6 +1686,7 @@ function buildRecognition() {
     rec.lang            = 'hi-IN';
 
     rec.onstart = () => {
+        srLastEvent = Date.now();
         permPending = false;
         if (permRetryInterval) { clearInterval(permRetryInterval); permRetryInterval = null; }
         // Hide permission modal and restore green dot
@@ -1697,6 +1698,7 @@ function buildRecognition() {
     };
 
     rec.onend = () => {
+        srLastEvent = Date.now();
         if (!isListening) { setUI(false); return; }
         creditedPerIndex = {};
         if (permPending) {
@@ -1708,6 +1710,7 @@ function buildRecognition() {
     };
 
     rec.onresult = (event) => {
+        srLastEvent = Date.now();
         let interim = '';
         for (let i = event.resultIndex; i < event.results.length; i++) {
             const res    = event.results[i];
@@ -1726,6 +1729,7 @@ function buildRecognition() {
     };
 
     rec.onerror = (e) => {
+        srLastEvent = Date.now();
         if (e.error === 'no-speech' || e.error === 'aborted') return;
         // Both 'not-allowed' and 'service-not-allowed' can mean Chrome's session-level
         // permission re-ask (the amber bar). Treat both as recoverable while listening.
@@ -1747,7 +1751,9 @@ function buildRecognition() {
                         if (!permPending || !isListening) {
                             clearInterval(permRetryInterval); permRetryInterval = null; return;
                         }
-                        try { rec.start(); } catch (_) {}
+                        // start() throws while Chrome still thinks the session is running —
+                        // abort() clears that so the next tick can start cleanly
+                        try { rec.start(); } catch (_) { try { rec.abort(); } catch (_) {} }
                     }, 800);
                 }
                 return;
@@ -1759,8 +1765,26 @@ function buildRecognition() {
         }
         // network / other errors — let onend handle the restart automatically
     };
+    ['audiostart', 'soundstart', 'speechstart'].forEach(t =>
+        rec.addEventListener(t, () => { srLastEvent = Date.now(); }));
     return rec;
 }
+
+// ── Stuck-session watchdog ─────────────────────────────────
+// Chrome sometimes stops sending any event (no result, no end, no error) — typically
+// after ~2300 counts — and only Stop→Start revived it. Even in silence Chrome fires
+// no-speech/onend every ~8s, so 8s of total silence from the engine means it's wedged:
+// do the same abort → start the user would do by hand.
+let srLastEvent = 0;
+const SR_STUCK_MS = 8000;
+setInterval(() => {
+    if (!useSR || !isListening || permPending || !recognition) return;
+    if (Date.now() - srLastEvent < SR_STUCK_MS) return;
+    srLastEvent = Date.now();
+    const rec = recognition;
+    try { rec.abort(); } catch (_) {}
+    setTimeout(() => { if (isListening) try { rec.start(); } catch (_) {} }, 300);
+}, 2000);
 
 // ════════════════════════════════════════════════════════
 // MOBILE VOICE ONSET DETECTION  (all mobile — iOS Safari + CriOS + Android)
@@ -1975,6 +1999,7 @@ function startListening() {
 
     if (useSR) {
         // Desktop Chrome only: Speech Recognition (accurate word matching, no lag on fast hardware)
+        srLastEvent = Date.now();
         if (!recognition) recognition = buildRecognition();
         if (!recognition) { isListening = false; showError('Speech recognition not supported. Use Google Chrome on desktop.'); return; }
         try { recognition.start(); } catch(e) {

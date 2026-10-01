@@ -28,6 +28,7 @@ User: Kuldeep. Has no coding background. Long-term goal: paid iOS/Android app (R
 - **Never call `rec.stop()` while chanting.** Measured live (Sep 25): each restart = ~2s deaf
   (stop→end 0.5s, start→audiostart 0.3s, →first result 1.1s). A "recycle every 30 words" experiment
   made lag much worse and was reverted. Remaining short pauses are Chrome ending its own sessions.
+- **Stuck-session watchdog:** around ~2300 counts Chrome can stop sending any event, and only Stop→Start revived it. Every SR event updates `srLastEvent`. If nothing arrives for `SR_STUCK_MS` (8s) while listening, the app does `abort()` then `start()` itself. The permission retry loop also calls `abort()` when `start()` throws. Root cause not yet confirmed live: the Chrome extension disconnected before the spoken-voice test.
 - **Mic permission re-ask (~2300 counts):** `onerror` `not-allowed` sets `permPending`, shows `#permModal`, and retries `rec.start()` every 800ms until the user clicks Allow. Permanent fix for the user: lock icon → Microphone → Always allow.
 
 ### Mobile: Web Audio burst detection (`startBurstDetection`)
