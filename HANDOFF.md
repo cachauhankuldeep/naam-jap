@@ -71,7 +71,7 @@ Style: white background, text `#0f4743`, accent `#4d9e8c`. `<html lang="en">` mu
 | `radha_jap_history` | `{ "YYYY-MM-DD": count }` |
 | `radha_jap_targets` | `{ "YYYY-MM-DD": target }` for back-filling past days |
 | `radha_jap_chant_time_YYYY-MM-DD` | seconds chanted that day |
-| `radha_jap_grand_masked` | `'1'` when the Maha Lakshya numbers are hidden (click the card to toggle) |
+| `radha_jap_grand_masked` | `'1'` when the Maha Lakshya numbers are hidden (toggle switch on the card) |
 | `radha_jap_manual` | `{ "YYYY-MM": count }` manual monthly entries (Sep 2026 →) |
 
 - **Manual entries** (card under Maha Lakshya): one input per month from `MANUAL_START` (2026-09) to the current month. The value is the month's figure (it replaces, not adds). `manualSum` is added **only** to the 1 Crore total, daily average and finish date, never to history, today's count or the 1K countdown (`updateGrandCard`: `totalDone = chanted + manualSum`, `updateGame10k(chanted)`). It is included in the backup file and merged on restore, keeping the higher value per month.

@@ -845,8 +845,21 @@
             gap: 12px;
         }
 
-        /* ── Maha Lakshya hide/show (click card to toggle) ── */
-        .grand-card { position: relative; cursor: pointer; user-select: none; }
+        /* ── Maha Lakshya hide/show (toggle switch in the card corner) ── */
+        .grand-card { position: relative; }
+        .grand-toggle {
+            position: absolute; top: 10px; right: 10px;
+            width: 30px; height: 17px; padding: 0;
+            border: none; border-radius: 99px; cursor: pointer;
+            background: #4d9e8c; transition: background 0.2s;
+        }
+        .grand-toggle::after {
+            content: ''; position: absolute; top: 2px; left: 15px;
+            width: 13px; height: 13px; border-radius: 50%;
+            background: #fff; transition: left 0.2s;
+        }
+        .grand-card.masked .grand-toggle { background: rgba(26,94,82,0.25); }
+        .grand-card.masked .grand-toggle::after { left: 2px; }
         .grand-hint {
             display: none;
             position: absolute; left: 0; right: 0; top: 50%;
@@ -1108,8 +1121,9 @@
 <!-- ── Right column: Maha Lakshya + Pace Calculator ── -->
 <div class="right-col" id="rightCol">
 
-<div class="grand-card" id="grandCard" onclick="toggleGrandMask()" title="Click to hide / show the count">
-    <div class="grand-hint">👁 Click to show</div>
+<div class="grand-card" id="grandCard">
+    <button class="grand-toggle" onclick="toggleGrandMask()" title="Show / hide the count" aria-label="Show or hide the count"></button>
+    <div class="grand-hint">Count hidden</div>
     <div class="grand-title">Maha<br>Lakshya<br>1 Crore</div>
     <div class="grand-done-row">
         <span class="grand-done-num" id="grandDoneNum">0</span>
@@ -1480,7 +1494,7 @@ function updateGrandCard(liveTotalOverride) {
         `<span class="grand-eta-days"> · ${fmtIN(daysLeft)} days</span>`;
 }
 
-// Click the Maha Lakshya card to hide/show its numbers; the choice is remembered.
+// Toggle switch on the Maha Lakshya card hides/shows its numbers; the choice is remembered.
 function toggleGrandMask(force) {
     const masked = document.getElementById('grandCard').classList.toggle('masked', force);
     try { localStorage.setItem('radha_jap_grand_masked', masked ? '1' : ''); } catch {}
