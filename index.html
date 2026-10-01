@@ -845,6 +845,20 @@
             gap: 12px;
         }
 
+        /* ── Maha Lakshya hide/show (click card to toggle) ── */
+        .grand-card { position: relative; cursor: pointer; user-select: none; }
+        .grand-hint {
+            display: none;
+            position: absolute; left: 0; right: 0; top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.7rem; color: rgba(15,71,67,0.45); letter-spacing: 1px;
+        }
+        .grand-card.masked .grand-done-num,
+        .grand-card.masked .grand-pct,
+        .grand-card.masked .grand-bar-fill,
+        .grand-card.masked .grand-eta { visibility: hidden; }
+        .grand-card.masked .grand-hint { display: block; }
+
         /* ── Manual monthly entries (count toward Maha Lakshya only) ── */
         .manual-card {
             background: rgba(255,255,255,0.92);
@@ -1094,7 +1108,8 @@
 <!-- ── Right column: Maha Lakshya + Pace Calculator ── -->
 <div class="right-col" id="rightCol">
 
-<div class="grand-card" id="grandCard">
+<div class="grand-card" id="grandCard" onclick="toggleGrandMask()" title="Click to hide / show the count">
+    <div class="grand-hint">👁 Click to show</div>
     <div class="grand-title">Maha<br>Lakshya<br>1 Crore</div>
     <div class="grand-done-row">
         <span class="grand-done-num" id="grandDoneNum">0</span>
@@ -1463,6 +1478,12 @@ function updateGrandCard(liveTotalOverride) {
         `~${fmtIN(Math.round(avgPerDay))}/day avg<br>` +
         `<span class="grand-eta-date">${dateLabel}</span>` +
         `<span class="grand-eta-days"> · ${fmtIN(daysLeft)} days</span>`;
+}
+
+// Click the Maha Lakshya card to hide/show its numbers; the choice is remembered.
+function toggleGrandMask(force) {
+    const masked = document.getElementById('grandCard').classList.toggle('masked', force);
+    try { localStorage.setItem('radha_jap_grand_masked', masked ? '1' : ''); } catch {}
 }
 
 // Returns oldest past-date with an unfulfilled manual target, or null
@@ -2137,6 +2158,7 @@ refreshPaceCache(); // prime cachedPaceStart once — updateGrandCard won't hit 
 _cacheEls();       // cache all hot-path DOM nodes — avoids getElementById on every tick
 updateGrandCard();
 renderManual();
+try { if (localStorage.getItem('radha_jap_grand_masked')) toggleGrandMask(true); } catch {}
 // Show backfill banner on page load if a pending target already exists
 updateBackfillBanner();
 // Show restore modal if history is empty
