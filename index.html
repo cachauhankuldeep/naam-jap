@@ -845,7 +845,42 @@
             gap: 12px;
         }
 
-        /* ── Pace calculator card ── */
+        /* ── Manual monthly entries (count toward Maha Lakshya only) ── */
+        .manual-card {
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(26,94,82,0.22);
+            border-radius: 18px;
+            padding: 14px 14px 12px;
+            box-shadow: 0 4px 24px rgba(26,94,82,0.08);
+        }
+        .manual-title {
+            font-size: 0.6rem; color: rgba(15,71,67,0.55);
+            letter-spacing: 3px; text-transform: uppercase;
+            text-align: center; margin-bottom: 10px;
+        }
+        .manual-row {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 8px; margin-bottom: 6px;
+        }
+        .manual-month { font-size: 0.75rem; color: #0f4743; white-space: nowrap; }
+        .manual-input {
+            width: 96px; padding: 5px 8px; text-align: right;
+            border: 1px solid rgba(26,94,82,0.2); border-radius: 8px;
+            background: rgba(26,94,82,0.04); color: #0f4743;
+            font: inherit; font-size: 0.78rem;
+            font-variant-numeric: tabular-nums;
+        }
+        .manual-input:focus { outline: none; border-color: rgba(26,94,82,0.6); }
+        .manual-input.saved { border-color: #4d9e8c; background: rgba(77,158,140,0.12); }
+        .manual-total {
+            font-size: 0.65rem; color: rgba(15,71,67,0.5);
+            text-align: center; margin-top: 8px;
+        }
+        .manual-total strong { color: #4d9e8c; }
+        @media (max-width: 900px) {
+            .manual-card { width: 100%; max-width: 320px; margin: 0 auto 90px; }
+        }
+
         /* Mobile: milestone col becomes a horizontal strip above main content */
         @media (max-width: 900px) {
             .milestone-col {
@@ -1073,6 +1108,12 @@
     <div class="grand-eta" id="grandEta">—</div>
 </div><!-- /grand-card -->
 
+<div class="manual-card">
+    <div class="manual-title">Manual Entries</div>
+    <div id="manualRows"></div>
+    <div class="manual-total">Added to 1 Crore: <strong id="manualTotal">0</strong></div>
+</div>
+
 
 </div><!-- /right-col -->
 
@@ -1111,6 +1152,12 @@ const GRAND_TARGET = 10000000;            // 1 crore
 const PACE_START   = '2026-04-18';        // day counting began (used for daily-avg calc)
 
 let savedGrandTotal = 0; // synced from localStorage after each saveToHistory — avoids repeated reads
+
+// Manual monthly entries: { "YYYY-MM": count }. Added to the 1 Crore total only —
+// not to history, today's count or the 1K countdown.
+const MANUAL_KEY   = 'radha_jap_manual';
+const MANUAL_START = '2026-09';
+let manualSum = 0;
 
 // ════════════════════════════════════════════════════════
 // WORD MATCHING
@@ -1176,6 +1223,7 @@ function checkDateRollover() {
     sessionFlushedSecs = secs;  // already counted above; new delta starts from here
     dailyChantSecs     = parseInt(localStorage.getItem('radha_jap_chant_time_' + today) || '0', 10);
     updateTodaySummary();
+    renderManual();   // a new month adds a new manual-entry row
 }
 
 function flushDailyChantTime() {
@@ -1301,6 +1349,45 @@ function loadTargets() {
     try { return JSON.parse(localStorage.getItem(TARGETS_KEY) || '{}'); } catch { return {}; }
 }
 
+// ── Manual monthly entries ─────────────────────────────────
+function loadManual() {
+    try { return JSON.parse(localStorage.getItem(MANUAL_KEY) || '{}'); } catch { return {}; }
+}
+
+function renderManual() {
+    const manual = loadManual();
+    const [ey, em] = todayKey().split('-').map(Number);
+    let [y, m] = MANUAL_START.split('-').map(Number);
+    let html = '';
+    while (y < ey || (y === ey && m <= em)) {
+        const mk = `${y}-${String(m).padStart(2, '0')}`;
+        html += `<div class="manual-row">
+            <span class="manual-month">${MONTHS[m - 1]} ${y}</span>
+            <input class="manual-input" type="number" min="0" placeholder="0" id="mi-${mk}"
+                   value="${manual[mk] || ''}"
+                   onchange="saveManual('${mk}', this.value)"
+                   onkeydown="if(event.key==='Enter'){this.blur();}" />
+        </div>`;
+        if (++m > 12) { m = 1; y++; }
+    }
+    document.getElementById('manualRows').innerHTML = html;
+    document.getElementById('manualTotal').textContent = fmtIN(manualSum);
+}
+
+function saveManual(mk, rawVal) {
+    const manual = loadManual();
+    const val = parseInt(rawVal, 10);
+    if (val > 0) manual[mk] = val; else delete manual[mk];
+    localStorage.setItem(MANUAL_KEY, JSON.stringify(manual));
+    manualSum = Object.values(manual).reduce((a, b) => a + b, 0);
+    document.getElementById('manualTotal').textContent = fmtIN(manualSum);
+    _grandEtaExpiry = 0;
+    updateGrandCard(savedGrandTotal + unsavedCount);
+
+    const inp = document.getElementById(`mi-${mk}`);
+    if (inp) { inp.classList.add('saved'); setTimeout(() => inp.classList.remove('saved'), 1000); }
+}
+
 function saveTarget(dateKey, rawVal) {
     const targets = loadTargets();
     const val = parseInt(rawVal, 10);
@@ -1330,7 +1417,8 @@ function saveTarget(dateKey, rawVal) {
 
 // ── Maha Lakshya — 1 Crore grand-target card ──────────────
 function updateGrandCard(liveTotalOverride) {
-    const totalDone = (liveTotalOverride !== undefined) ? liveTotalOverride : savedGrandTotal;
+    const chanted   = (liveTotalOverride !== undefined) ? liveTotalOverride : savedGrandTotal;
+    const totalDone = chanted + manualSum;
 
     // --- pace calculation — use cached startKey (refreshed on save, not every tick) ---
     const [sy, sm, sd] = cachedPaceStart.split('-').map(Number);
@@ -1351,11 +1439,11 @@ function updateGrandCard(liveTotalOverride) {
 
     if (totalDone >= GRAND_TARGET) {
         _el.grandEta.innerHTML = `<span class="grand-eta-date">🎉 1 Crore Complete! Jai Radha!</span>`;
-        updateGame10k(totalDone);
+        updateGame10k(chanted);
         return;
     }
     // 1K countdown must update on every count — keep it outside the ETA throttle
-    updateGame10k(totalDone);
+    updateGame10k(chanted);
 
     if (avgPerDay < 1) {
         _el.grandEta.textContent = 'Start chanting to see your estimated completion date…';
@@ -2018,10 +2106,12 @@ function updateGame10k(total) {
 
 // Initialise cached grand total and paint the card on page load
 savedGrandTotal = Object.values(loadHistory()).reduce((a, b) => a + b, 0);
+manualSum       = Object.values(loadManual()).reduce((a, b) => a + b, 0);
 game10kPrevBlock = Math.floor(savedGrandTotal / GAME_10K);
 refreshPaceCache(); // prime cachedPaceStart once — updateGrandCard won't hit localStorage
 _cacheEls();       // cache all hot-path DOM nodes — avoids getElementById on every tick
 updateGrandCard();
+renderManual();
 // Show backfill banner on page load if a pending target already exists
 updateBackfillBanner();
 // Show restore modal if history is empty
@@ -2089,6 +2179,15 @@ async function processRestoreData(file) {
             const existT = loadTargets();
             const mergedT = Object.assign({}, data.targets, existT);
             localStorage.setItem(TARGETS_KEY, JSON.stringify(mergedT));
+        }
+        if (data.manual) {
+            const mergedM = loadManual();
+            for (const mk of Object.keys(data.manual)) {
+                if ((data.manual[mk] || 0) > (mergedM[mk] || 0)) mergedM[mk] = data.manual[mk];
+            }
+            localStorage.setItem(MANUAL_KEY, JSON.stringify(mergedM));
+            manualSum = Object.values(mergedM).reduce((a,b)=>a+b,0);
+            renderManual();
         }
         savedGrandTotal = Object.values(merged).reduce((a,b)=>a+b,0);
         updateGrandCard();
@@ -2171,6 +2270,7 @@ async function doAutoSave() {
         const payload = JSON.stringify({
             history : loadHistory(),
             targets : loadTargets(),
+            manual  : loadManual(),
             savedAt : new Date().toISOString(),
             version : 1
         }, null, 2);

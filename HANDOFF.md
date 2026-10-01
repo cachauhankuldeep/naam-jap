@@ -52,7 +52,7 @@ User: Kuldeep. Has no coding background. Long-term goal: paid iOS/Android app (R
 Three columns on desktop, stacked on mobile (≤900px):
 - **Left:** 1K countdown (`GAME_10K = 1000`, counts down, "Round N"), chanting clock, Today timer with ✕ reset
 - **Middle:** Radha Count, target + progress bar, transcript, history
-- **Right:** Maha Lakshya card (target 1 crore), with total, %, daily average and estimated finish date
+- **Right:** Maha Lakshya card (target 1 crore), with total, %, daily average and estimated finish date; Manual Entries card below it
 
 Style: white background, text `#0f4743`, accent `#4d9e8c`. `<html lang="en">` must stay `en`: `hi` would switch every element to the Devanagari serif font. Numbers are formatted by `fmtIN()` in Western style (1,500,000). Count cards are a fixed 320px wide with `tabular-nums`, so the layout doesn't shift as digits change.
 
@@ -70,7 +70,9 @@ Style: white background, text `#0f4743`, accent `#4d9e8c`. `<html lang="en">` mu
 | `radha_jap_history` | `{ "YYYY-MM-DD": count }` |
 | `radha_jap_targets` | `{ "YYYY-MM-DD": target }` for back-filling past days |
 | `radha_jap_chant_time_YYYY-MM-DD` | seconds chanted that day |
+| `radha_jap_manual` | `{ "YYYY-MM": count }` manual monthly entries (Sep 2026 →) |
 
+- **Manual entries** (card under Maha Lakshya): one input per month from `MANUAL_START` (2026-09) to the current month. The value is the month's figure (it replaces, not adds). `manualSum` is added **only** to the 1 Crore total, daily average and finish date, never to history, today's count or the 1K countdown (`updateGrandCard`: `totalDone = chanted + manualSum`, `updateGame10k(chanted)`). It is included in the backup file and merged on restore, keeping the higher value per month.
 - **Backfill:** past days with a target that isn't met get new counts first, oldest first (`saveToHistory`). The rest goes to today.
-- **Auto-save file:** File System Access API. The file handle is stored in IndexedDB (`naam_jap_db`). Writes every 30s and when the tab is hidden. Format: `{history, targets, savedAt, version: 1}`.
+- **Auto-save file:** File System Access API. The file handle is stored in IndexedDB (`naam_jap_db`). Writes every 30s and when the tab is hidden. Format: `{history, targets, manual, savedAt, version: 1}`.
 - **Restore:** merges a backup file, keeping the higher count per date. Shown automatically if localStorage is empty.
