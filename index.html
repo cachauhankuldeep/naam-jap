@@ -287,10 +287,6 @@
             font-weight: 700;
             color: #4d9e8c;
         }
-        .today-sep {
-            font-size: 0.75rem;
-            color: rgba(15,71,67,0.25);
-        }
         .clock-ring {
             width: 120px;
             height: 120px;
@@ -423,7 +419,6 @@
         .day-target-input::placeholder { color: rgba(15,71,67,0.2); }
         .day-count-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: 0 0 auto; }
         .day-count { color: rgba(15,71,67,0.7); font-weight: 600; }
-        .day-chant-time { font-size: 0.62rem; color: #4d9e8c; font-weight: 500; letter-spacing: 0.3px; }
         .day-shortfall { font-size: 0.62rem; color: #f59e0b; }
         .day-fulfilled { font-size: 0.62rem; color: #7cc4b4; }
 
@@ -783,30 +778,7 @@
             transform: scale(0.82);
             pointer-events: none;
         }
-        .milestone-card-title {
-            font-size: 1.1rem;
-            color: rgba(15,71,67,0.5);
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            margin-bottom: 10px;
-        }
-        .milestone-count {
-            font-size: 3.2rem;
-            color: #4d9e8c;
-            font-weight: 700;
-            display: block;
-            margin-bottom: 3px;
-            letter-spacing: 0.5px;
-        }
-        .milestone-sub {
-            font-size: 1rem;
-            color: rgba(15,71,67,0.45);
-            letter-spacing: 0.8px;
-            line-height: 1.6;
-        }
 
-
-        /* Tachometer ring (1M/20L) */
         /* ── Block countdown cards (25K / 50K / 100K) ── */
         .block-mini-header {
             font-size: 1.1rem;
@@ -1128,12 +1100,6 @@ let targetReached    = false;
 let micStream        = null;
 let permPending      = false; // true while Chrome's mic permission bar is showing
 let permRetryInterval = null; // independent interval that retries rec.start() during permission re-ask
-// Desktop SR session recycling — keeps each Chrome recognition session short so it stays fast
-let srSessionStart   = 0;
-let srRecycling      = false;
-const SR_MAX_INTERIM_CHARS = 160;    // ~30 words of "राधा राधा…" in one unfinished phrase
-const SR_MAX_RESULTS       = 40;     // results accumulated in one session
-const SR_MAX_SESSION_MS    = 60000;  // hard cap per session
 // Performance caches — avoids expensive localStorage reads and Intl calls on every count
 let _backfillExpiry  = 0;
 let _backfillResult  = null;
@@ -1509,6 +1475,8 @@ function renderHistory() {
         byMonth[mk].push(k);
     }
 
+    const targets = loadTargets();
+    const today   = todayKey();
     let html = '';
     for (const mk of Object.keys(byMonth).sort().reverse()) {
         const [y, m] = mk.split('-');
@@ -1526,8 +1494,6 @@ function renderHistory() {
             </div>
             <div class="day-list" id="days-${mk}">`;
 
-        const targets = loadTargets();
-        const today   = todayKey();
         for (const dk of days) {
             const [dy, dm, dd] = dk.split('-');
             const dateObj  = new Date(parseInt(dy), parseInt(dm)-1, parseInt(dd));
@@ -1620,7 +1586,7 @@ const useSR    = hasSR && !isMobile;   // desktop Chrome only
 // ════════════════════════════════════════════════════════
 // SPEECH RECOGNITION (desktop Chrome only)
 // One instance, restarted on every onend — rebuilding it makes Chrome re-ask for the mic.
-// Sessions are recycled after ~30 words / 60s so Chrome's transcription stays fast.
+// Never stop() it ourselves: every restart costs ~2s of deaf time (measured live).
 // ════════════════════════════════════════════════════════
 function buildRecognition() {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1632,8 +1598,6 @@ function buildRecognition() {
     rec.lang            = 'hi-IN';
 
     rec.onstart = () => {
-        srRecycling = false;
-        srSessionStart = Date.now();
         permPending = false;
         if (permRetryInterval) { clearInterval(permRetryInterval); permRetryInterval = null; }
         // Hide permission modal and restore green dot
@@ -1657,7 +1621,6 @@ function buildRecognition() {
 
     rec.onresult = (event) => {
         let interim = '';
-        let longestInterim = 0;
         for (let i = event.resultIndex; i < event.results.length; i++) {
             const res    = event.results[i];
             const phrase = res[0].transcript;
@@ -1669,25 +1632,9 @@ function buildRecognition() {
             if (res.isFinal) {
                 delete creditedPerIndex[i];
                 setTranscript(phrase, false);
-            } else {
-                interim += phrase;
-                if (phrase.length > longestInterim) longestInterim = phrase.length;
-            }
+            } else { interim += phrase; }
         }
         if (interim) setTranscript(interim, true);
-
-        // Recycle the session before it gets slow. Non-stop chanting never pauses, so
-        // Chrome never finalises the phrase: the interim text grows without limit and
-        // Chrome re-transcribes the whole thing on every update → counts arrive later
-        // and later. stop() makes Chrome deliver the final result (credited as usual
-        // via creditedPerIndex), then onend restarts the same instance in 50ms.
-        if (!srRecycling &&
-            (longestInterim > SR_MAX_INTERIM_CHARS ||
-             event.results.length > SR_MAX_RESULTS ||
-             Date.now() - srSessionStart > SR_MAX_SESSION_MS)) {
-            srRecycling = true;
-            try { rec.stop(); } catch (_) {}
-        }
     };
 
     rec.onerror = (e) => {
@@ -1857,22 +1804,13 @@ function setUI(on) {
     document.getElementById('stopBtn').style.display  = on ? 'inline-block' : 'none';
 }
 
-// Transcript is repainted at most once per frame, and only its tail — the box shows
-// ~3 lines, so rendering a huge phrase just burns CPU on regex + layout.
-let _pendingTranscript = null;
+// Only the tail is rendered — the box shows ~3 lines, a long phrase is wasted work.
 function setTranscript(text, isInterim) {
     if (text.length > 120) text = '…' + text.slice(-120);
-    const first = _pendingTranscript === null;
-    _pendingTranscript = { text, isInterim };
-    if (first) requestAnimationFrame(() => {
-        const { text, isInterim } = _pendingTranscript;
-        _pendingTranscript = null;
-        const safe = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        const html = highlight(safe);
-        const box  = document.getElementById('transcript');
-        box.innerHTML = isInterim ? `<span class="interim">${html}</span>` : html;
-        box.scrollTop = box.scrollHeight;
-    });
+    const html = highlight(text.replace(/&/g, '&amp;').replace(/</g, '&lt;'));
+    const box  = document.getElementById('transcript');
+    box.innerHTML = isInterim ? `<span class="interim">${html}</span>` : html;
+    box.scrollTop = box.scrollHeight;
 }
 
 let unsavedCount = 0;
@@ -1908,28 +1846,23 @@ function addCount(n) {
         saveDebounce = setTimeout(flushUnsaved, 3000);
     }
 
-    scheduleCountRender();
+    renderCount();
 }
 
-// All count-driven DOM updates happen once per animation frame, however many counts arrived.
-let _countRenderQueued = false;
+// Updates run synchronously on every count. (Not requestAnimationFrame: Chrome pauses
+// rAF when its window is covered by another app, which froze the display.)
 let _flashTimer = null;
-function scheduleCountRender() {
-    if (_countRenderQueued) return;
-    _countRenderQueued = true;
-    requestAnimationFrame(() => {
-        _countRenderQueued = false;
-        const el = document.getElementById('countDisplay');
-        el.textContent = fmtIN(count);
-        fitCountFont();
-        el.style.transform = 'scale(1.08)';
-        el.style.color = '#0f4743';   // darker teal pulse — stays readable on the white card
-        clearTimeout(_flashTimer);
-        _flashTimer = setTimeout(() => { el.style.transform = ''; el.style.color = ''; }, 200);
-        if (target) updateProgress();
-        // Live grand-card update: savedGrandTotal (last flush) + unsavedCount = true running total
-        updateGrandCard(savedGrandTotal + unsavedCount);
-    });
+function renderCount() {
+    const el = document.getElementById('countDisplay');
+    el.textContent = fmtIN(count);
+    fitCountFont();
+    el.style.transform = 'scale(1.08)';
+    el.style.color = '#0f4743';   // darker teal pulse — white was invisible on the white card
+    clearTimeout(_flashTimer);
+    _flashTimer = setTimeout(() => { el.style.transform = ''; el.style.color = ''; }, 200);
+    if (target) updateProgress();
+    // Live grand-card update: savedGrandTotal (last flush) + unsavedCount = true running total
+    updateGrandCard(savedGrandTotal + unsavedCount);
 }
 
 function showError(msg) {
@@ -2230,8 +2163,10 @@ async function putStoredHandle(handle) {
 }
 
 // ── Write data to file ────────────────────────────────
+let autoSaving = false;
 async function doAutoSave() {
-    if (!autoSaveHandle) return;
+    if (!autoSaveHandle || autoSaving) return;  // overlapping writes leave .crswap files behind
+    autoSaving = true;
     try {
         const payload = JSON.stringify({
             history : loadHistory(),
@@ -2247,6 +2182,8 @@ async function doAutoSave() {
         setSaveStatus('⚠️ Save failed — click button to re-enable', 'warn');
         autoSaveHandle = null;
         if (autoSaveInterval) { clearInterval(autoSaveInterval); autoSaveInterval = null; }
+    } finally {
+        autoSaving = false;
     }
 }
 

@@ -1,5 +1,5 @@
 # Naam Jap — Handoff
-_Last updated: 2026-09-24_
+_Last updated: 2026-10-01_
 
 Speech-activated counter for the word "Radha". The whole app is one file: `index.html`.
 User: Kuldeep. Has no coding background. Long-term goal: paid iOS/Android app (React Native). For now: the web app.
@@ -25,12 +25,9 @@ User: Kuldeep. Has no coding background. Long-term goal: paid iOS/Android app (R
 - `continuous`, `interimResults`, `lang: 'hi-IN'`. Matches `PATTERNS` (Devanagari + Roman spellings).
 - `creditedPerIndex[i]` = words already counted for result `i`. Only the difference is added, so a phrase is never double-counted.
 - **One instance, restarted 50ms after each `onend`.** Rebuilding the instance makes Chrome ask for the mic again.
-- **Session recycling (the lag fix, Sep 24):** during non-stop chanting Chrome never finishes the phrase. The unfinished text keeps growing and Chrome re-transcribes all of it every time, so counts arrive later and later ("stuck until I pause"). `onresult` now calls `rec.stop()` once any of these is true:
-  - the unfinished phrase is over `SR_MAX_INTERIM_CHARS` (160, about 30 words),
-  - the session has more than `SR_MAX_RESULTS` (40) results,
-  - the session is older than `SR_MAX_SESSION_MS` (60s).
-
-  Chrome then delivers the final result (counted normally), and `onend` restarts the session.
+- **Never call `rec.stop()` while chanting.** Measured live (Sep 25): each restart = ~2s deaf
+  (stop→end 0.5s, start→audiostart 0.3s, →first result 1.1s). A "recycle every 30 words" experiment
+  made lag much worse and was reverted. Remaining short pauses are Chrome ending its own sessions.
 - **Mic permission re-ask (~2300 counts):** `onerror` `not-allowed` sets `permPending`, shows `#permModal`, and retries `rec.start()` every 800ms until the user clicks Allow. Permanent fix for the user: lock icon → Microphone → Always allow.
 
 ### Mobile: Web Audio burst detection (`startBurstDetection`)
@@ -41,8 +38,9 @@ User: Kuldeep. Has no coding background. Long-term goal: paid iOS/Android app (R
 ---
 
 ## Performance rules (keep these)
-- **`addCount()` only updates state.** All screen updates go through `scheduleCountRender()`, which runs at most once per animation frame however many counts arrive.
-- **Transcript:** `setTranscript(text)` takes plain text, renders only the last 120 characters, once per frame.
+- **`addCount()` → `renderCount()` runs synchronously.** Don't batch with `requestAnimationFrame`:
+  Chrome pauses rAF when its window is covered by another app, freezing the display.
+- **Transcript:** `setTranscript(text)` takes plain text, renders only the last 120 characters.
 - **Saving:** `flushUnsaved()` is the single way to save pending counts. Normal mode saves after 3s of silence; backfill mode saves at most once a second.
 - **Caches:** `_backfillResult` (15s), grand-card finish-date estimate throttled to every 2s, DOM nodes cached in `_el`. `savedGrandTotal` holds the total so `localStorage` isn't re-read on every count.
 - **No `backdrop-filter` on cards.** It was invisible on the white background but was redrawn on every count.
